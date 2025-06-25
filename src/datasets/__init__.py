@@ -1,0 +1,93 @@
+import torch
+import pytorch_lightning as pl
+import webdataset as wds
+
+from .motion_capture_dataset import MotionCaptureDataset
+
+def load_web_dataset(
+        dataset_url: str,
+        resampled: bool = True,
+        shardshuffle: bool = True,
+        shuffle_value: int = 2):
+    
+    return wds.WebDataset(dataset_url, resampled=resampled, shardshuffle=shardshuffle).shuffle(shuffle_value)
+
+class DataModule(pl.LightningDataModule):
+    # Hardcoded values for testing purposes
+    _test_epoch_value = 2
+    _test_shuffle_value = 2
+
+    # Training: Image dataset
+    _ava_midframes_train_wds_url = "hmr2_training_data/dataset_tars/ava-train-midframes-1fps-vitpose/{000000..000092}.tar"
+
+    # Training: Motion capture dataset
+    _cmu_mocap_train_wds_url = "hmr2_training_data/cmu_mocap.npz"
+
+    # Validation dataset
+    _coco_val_wds_url = "hmr2_training_data/dataset_tars/coco-val/{000000..000000}.tar"
+
+    def __init__(self,
+                 training_batch_size: int = 10,
+                 training_number_of_workers: int = 1,
+                 training_prefetch_factor: int = 2,
+                 training_number_of_samples: int = 10) -> None:
+        
+        # Initialize dataset variables
+        self.training_dataset = None
+        self.validation_dataset = None
+        self.test_dataset = None
+        self.motion_capture_dataset = None
+
+        # Initialize general class variables
+        self.training_batch_size = training_batch_size
+        self.training_number_of_workers = training_number_of_workers
+        self.training_prefetch_factor = training_prefetch_factor
+        self.training_mocap_batch_size = training_number_of_samples * training_batch_size
+
+    def __str__(self):
+        return "Successfully loaded all of the data!"
+
+    def setup(self) -> None:
+        """
+        Load the necessary training data using the WebLoader
+
+        Training dataset will utilise the Ava Midframes training set
+        Validation dataset will utilise the COCO validation set
+        """
+        if (self.training_dataset == None):
+            self.training_dataset = load_web_dataset(self._ava_midframes_train_wds_url).with_epoch(self._test_epoch_value).shuffle(self._test_shuffle_value)
+            self.motion_capture_dataset = MotionCaptureDataset(self._cmu_mocap_train_wds_url)
+            
+            self.validation_dataset = load_web_dataset(self._coco_val_wds_url).shuffle(self._test_shuffle_value)
+    
+    def train_dataloader(self) -> dict:
+        """
+        Setup the training DataLoader for both images and motion capture
+        
+        Returns:
+            training_dataloaders (dict) : Dictionary containing the image and motion capture dataloaders. Keys are appropriately 'img' and 'mocap'
+        """
+        train_dataloader = torch.utils.data.DataLoader(self.training_dataset, self.training_batch_size, drop_last=True, num_workers=self.training_number_of_workers, prefetch_factor=self.training_prefetch_factor)
+        motion_capture_dataloader = torch.utils.data.DataLoader(self.motion_capture_dataset, self.training_mocap_batch_size, shuffle=True, drop_last=True, num_works=self.training_number_of_workers)
+
+        training_dataloaders = {
+            'img': train_dataloader,
+            'mocap': motion_capture_dataloader
+        }
+
+        return training_dataloaders
+
+    def validation_dataloader(self) -> dict:
+        """
+        Setup the validation DataLoader
+
+        Returns:
+            validation_dataloader (torch.utils.data.DataLoader): Validation dataset as a dataloader 
+        """
+        validation_dataloader = torch.utils.data.DataLoader(self.validation_dataset, self.training_batch_size, drop_last=True, num_workers=self.training_number_of_workers)
+        
+        return validation_dataloader        
+
+if __name__ == "__main__":
+    test_initialization = DataModule()
+    print(test_initialization)
