@@ -2,7 +2,7 @@ import torch
 import pytorch_lightning as pl
 import webdataset as wds
 
-from .motion_capture_dataset import MotionCaptureDataset
+from motion_capture_dataset import MotionCaptureDataset
 
 def load_web_dataset(
         dataset_url: str,
@@ -17,8 +17,16 @@ class DataModule(pl.LightningDataModule):
     _test_epoch_value = 2
     _test_shuffle_value = 2
 
-    # Training: Image dataset
+    # Training: Image datasets
+    _mpi_inf_train_wds_url = "hmr2_training_data/dataset_tars/mpi-inf-train-pruned/{000000..00006}.tar"
+    _h36m_wmask_train_wds_url = "hmr2_training_data/dataset_tars/h36m-train/{000000..000312}.tar"
+    _mpii_wmask_train_wds_url = "hmr2_training_data/dataset_tars/mpii-train/{000000..000009}.tar"
+    _coco_2014_wmask_train_wds_url = "hmr2_training_data/dataset_tars/coco-train-2014-pruned/{000000..000017}.tar"
+    _coco_2014_vitpose_replicate_pruned_train_wds_url = "hmr2_training_data/dataset_tars/coco-train-2014-vitpose-pruned/{000000..000044}.tar"
     _ava_midframes_train_wds_url = "hmr2_training_data/dataset_tars/ava-train-midframes-1fps-vitpose/{000000..000092}.tar"
+    _aic_wmask_train_wds_url = "hmr2_training_data/dataset_tars/aic-train-vitpose/{000000..000104}.tar"
+    _insta_wmask_train_wds_url = "hmr2_training_data/dataset_tars/insta-train-vitpose-replicate/{000000..003657}.tar"
+
 
     # Training: Motion capture dataset
     _cmu_mocap_train_wds_url = "hmr2_training_data/cmu_mocap.npz"
@@ -55,7 +63,7 @@ class DataModule(pl.LightningDataModule):
         Validation dataset will utilise the COCO validation set
         """
         if (self.training_dataset == None):
-            self.training_dataset = load_web_dataset(self._ava_midframes_train_wds_url).with_epoch(self._test_epoch_value).shuffle(self._test_shuffle_value)
+            self.training_dataset = load_web_dataset(self._coco_2014_vitpose_replicate_pruned_train_wds_url).with_epoch(self._test_epoch_value).shuffle(self._test_shuffle_value)
             self.motion_capture_dataset = MotionCaptureDataset(self._cmu_mocap_train_wds_url)
             
             self.validation_dataset = load_web_dataset(self._coco_val_wds_url).shuffle(self._test_shuffle_value)
@@ -86,8 +94,4 @@ class DataModule(pl.LightningDataModule):
         """
         validation_dataloader = torch.utils.data.DataLoader(self.validation_dataset, self.training_batch_size, drop_last=True, num_workers=self.training_number_of_workers)
         
-        return validation_dataloader        
-
-if __name__ == "__main__":
-    test_initialization = DataModule()
-    print(test_initialization)
+        return validation_dataloader
