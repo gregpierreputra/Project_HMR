@@ -27,7 +27,6 @@ class DataModule(pl.LightningDataModule):
     _aic_wmask_train_wds_url = "hmr2_training_data/dataset_tars/aic-train-vitpose/{000000..000104}.tar"
     _insta_wmask_train_wds_url = "hmr2_training_data/dataset_tars/insta-train-vitpose-replicate/{000000..003657}.tar"
 
-
     # Training: Motion capture dataset
     _cmu_mocap_train_wds_url = "hmr2_training_data/cmu_mocap.npz"
 
@@ -63,10 +62,10 @@ class DataModule(pl.LightningDataModule):
         Validation dataset will utilise the COCO validation set
         """
         if (self.training_dataset == None):
-            self.training_dataset = load_web_dataset(self._coco_2014_vitpose_replicate_pruned_train_wds_url).with_epoch(self._test_epoch_value).shuffle(self._test_shuffle_value)
+            self.training_dataset = load_web_dataset(self._h36m_wmask_train_wds_url).with_epoch(self._test_epoch_value).shuffle(self._test_shuffle_value)
             self.motion_capture_dataset = MotionCaptureDataset(self._cmu_mocap_train_wds_url)
             
-            self.validation_dataset = load_web_dataset(self._coco_val_wds_url).shuffle(self._test_shuffle_value)
+            self.validation_dataset = load_web_dataset(self._mpi_inf_train_wds_url).shuffle(self._test_shuffle_value)
     
     def train_dataloader(self) -> DataLoader:
         """
