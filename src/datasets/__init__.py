@@ -1,6 +1,6 @@
-import torch
 import pytorch_lightning as pl
 import webdataset as wds
+from torch.utils.data import DataLoader
 
 from motion_capture_dataset import MotionCaptureDataset
 
@@ -68,15 +68,15 @@ class DataModule(pl.LightningDataModule):
             
             self.validation_dataset = load_web_dataset(self._coco_val_wds_url).shuffle(self._test_shuffle_value)
     
-    def train_dataloader(self) -> dict:
+    def train_dataloader(self) -> DataLoader:
         """
         Setup the training DataLoader for both images and motion capture
         
         Returns:
             training_dataloaders (dict) : Dictionary containing the image and motion capture dataloaders. Keys are appropriately 'img' and 'mocap'
         """
-        train_dataloader = torch.utils.data.DataLoader(self.training_dataset, self.training_batch_size, drop_last=True, num_workers=self.training_number_of_workers, prefetch_factor=self.training_prefetch_factor)
-        motion_capture_dataloader = torch.utils.data.DataLoader(self.motion_capture_dataset, self.training_mocap_batch_size, shuffle=True, drop_last=True, num_works=self.training_number_of_workers)
+        train_dataloader = DataLoader(self.training_dataset, self.training_batch_size, drop_last=True, num_workers=self.training_number_of_workers, prefetch_factor=self.training_prefetch_factor)
+        motion_capture_dataloader = DataLoader(self.motion_capture_dataset, self.training_mocap_batch_size, shuffle=True, drop_last=True, num_works=self.training_number_of_workers)
 
         training_dataloaders = {
             'img': train_dataloader,
@@ -85,13 +85,13 @@ class DataModule(pl.LightningDataModule):
 
         return training_dataloaders
 
-    def validation_dataloader(self) -> dict:
+    def validation_dataloader(self) -> DataLoader:
         """
         Setup the validation DataLoader
 
         Returns:
             validation_dataloader (torch.utils.data.DataLoader): Validation dataset as a dataloader 
         """
-        validation_dataloader = torch.utils.data.DataLoader(self.validation_dataset, self.training_batch_size, drop_last=True, num_workers=self.training_number_of_workers)
+        validation_dataloader = DataLoader(self.validation_dataset, self.training_batch_size, drop_last=True, num_workers=self.training_number_of_workers)
         
         return validation_dataloader

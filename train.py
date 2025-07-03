@@ -11,9 +11,11 @@ from src.utils.misc_logger import get_logger
 # Directory
 _OUTPUT_DIRECTORY = ""
 
-# General variables
-_GENERAL_CHECKPOINT_STEPS = 5000
-_GENERAL_SAVE_TOP_K_MODEL = 1
+# Checkpoint callback hardcoded variables
+_CHECKPOINT_CALLBACK_CHECKPOINT_STEPS = 5000
+_CHECKPOINT_CALLBACK_SAVE_TOP_K_MODEL = 2
+_CHECKPOINT_CALLBACK_MONITOR = "val_dice"
+_CHECKPOINT_CALLBACK_MODE = "max"
 
 log = get_logger(__name__)
 
@@ -23,10 +25,10 @@ def train() -> Tuple[dict, dict]:
     log.info("Instantiating data module with training and validation dataset")
     
     data_module = DataModule()
-
+    
     # Setup model
     log.info("Instantiating model {}".format(""))
-    
+
     model = ""
 
     # Setup Tensorboard logger
@@ -40,7 +42,7 @@ def train() -> Tuple[dict, dict]:
         version='',
         default_hp_metric=False)
 
-    # Setup checkpoint saving
+    # Setup callbacks
     # Feel free to change any settings, this is just a base setup - Greg | 30-06-2025 
     log.info("Instantiating checkpoint callback, and learning rate monitor")
     
@@ -48,9 +50,12 @@ def train() -> Tuple[dict, dict]:
         dirpath=os.path.join(
             _OUTPUT_DIRECTORY,
             'checkpoints'),
-        every_n_train_steps=_GENERAL_CHECKPOINT_STEPS,
+        filename="{epoch}-{val_dice:.2f}",
+        every_n_train_steps=_CHECKPOINT_CALLBACK_CHECKPOINT_STEPS,
         save_last=True,
-        save_top_k=_GENERAL_SAVE_TOP_K_MODEL)
+        save_top_k=_CHECKPOINT_CALLBACK_SAVE_TOP_K_MODEL,
+        monitr=_CHECKPOINT_CALLBACK_MONITOR,
+        mode=_CHECKPOINT_CALLBACK_MODE)
     
     learning_rate_monitor = RichProgressBar()
     
@@ -60,9 +65,26 @@ def train() -> Tuple[dict, dict]:
     ]
 
     # Setup trainer
+    # A basic trainer implementation based on what I have explored in PyTorch lightning
     log.info("Instantiating trainer <{}>".format(
         "pytorch_lightning.Trainer"))
     
     # Setup hyperparameter logging
 
-    # Train the model
+    trainer = Trainer(
+        accelerator="",
+        max_epochs="",
+        logger="",
+        log_every_n_steps="",
+        callbacks=callbacks
+    )
+
+    # Call the trainer
+    trainer.fit(model, datamodule=data_module)
+
+def main():
+    # Train the model - encapsulate in helper function for future added functionality
+    train()
+
+if __name__ == "__main__":
+    main()
