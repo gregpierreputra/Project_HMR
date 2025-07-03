@@ -14,8 +14,6 @@ _OUTPUT_DIRECTORY = ""
 # Checkpoint callback hardcoded variables
 _CHECKPOINT_CALLBACK_CHECKPOINT_STEPS = 5000
 _CHECKPOINT_CALLBACK_SAVE_TOP_K_MODEL = 2
-_CHECKPOINT_CALLBACK_MONITOR = "val_dice"
-_CHECKPOINT_CALLBACK_MODE = "max"
 
 log = get_logger(__name__)
 
@@ -53,9 +51,7 @@ def train() -> Tuple[dict, dict]:
         filename="{epoch}-{val_dice:.2f}",
         every_n_train_steps=_CHECKPOINT_CALLBACK_CHECKPOINT_STEPS,
         save_last=True,
-        save_top_k=_CHECKPOINT_CALLBACK_SAVE_TOP_K_MODEL,
-        monitr=_CHECKPOINT_CALLBACK_MONITOR,
-        mode=_CHECKPOINT_CALLBACK_MODE)
+        save_top_k=_CHECKPOINT_CALLBACK_SAVE_TOP_K_MODEL)
     
     learning_rate_monitor = RichProgressBar()
     
@@ -69,8 +65,6 @@ def train() -> Tuple[dict, dict]:
     log.info("Instantiating trainer <{}>".format(
         "pytorch_lightning.Trainer"))
     
-    # Setup hyperparameter logging
-
     trainer = Trainer(
         accelerator="",
         max_epochs="",
