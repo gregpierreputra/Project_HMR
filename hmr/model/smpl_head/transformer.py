@@ -1,10 +1,10 @@
+import einops
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
-import einops
 
-from ...utils.geometry import rot6d_to_rotmat, aa_to_rotmat
-from ..components.pose_transformer import TransformerDecoder
+from hmr.utils.geometry import aa_to_rotmat, rot6d_to_rotmat
+from hmr.model.components.pose_transformer import TransformerDecoder
 
 
 class SMPLTransformerDecoderHead(nn.Module):
