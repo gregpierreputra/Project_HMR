@@ -5,8 +5,8 @@ from pytorch_lightning.callbacks import ModelCheckpoint, RichProgressBar, Learni
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning import Trainer
 
-from src.datasets import DataModule
-from src.utils.misc_logger import get_logger
+from hmr.datasets import DataModule
+from hmr.utils.misc_logger import get_logger
 
 # Directory
 _OUTPUT_DIRECTORY = ""
