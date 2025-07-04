@@ -1,3 +1,7 @@
 .ipynb_checkpoints/
 *.pth
 __pycache__/
+# Specific
+
+# Byte-compiled data files from DataModule
+*.py[cod]

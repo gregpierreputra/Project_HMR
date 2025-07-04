@@ -1,0 +1,12 @@
+name: Project-3D-Human-Mesh-Mapping
+channels:
+  - pytorch
+  - conda-forge
+dependencies:
+  - python=3.10
+  - numpy
+  - pytorch
+  - pip
+  - pip:
+    - pytorch-lightning
+    - webdataset
