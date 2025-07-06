@@ -13,7 +13,9 @@ class SMPL(smplx.SMPLLayer):
                  joint_regressor_extra: Optional[str] = None,
                  gender: str = 'neutral',
                  num_body_joints: int  = 23,
-                 update_hips: bool = False):
+                 update_hips: bool = False,
+                 *args,
+                 **kwargs):
         """
         Utilizing the SMPLX - an extension of the SMPL implementation that supports more joints
         
@@ -32,7 +34,9 @@ class SMPL(smplx.SMPLLayer):
                                    gender=gender,
                                    num_body_joints=num_body_joints,
                                    mean_params=mean_params,
-                                   joint_regressor_extra=joint_regressor_extra)
+                                   joint_regressor_extra=joint_regressor_extra,
+                                   *args,
+                                   **kwargs)
 
         # Joint mapping values between SMPL and OpenPose
         smpl_to_openpose = [24, 12, 17, 19, 21, 
