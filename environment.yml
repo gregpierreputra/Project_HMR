@@ -1,12 +1,32 @@
-name: Project-3D-Human-Mesh-Mapping
+name: HMR
 channels:
   - pytorch
+  - nvidia
   - conda-forge
 dependencies:
   - python=3.10
   - numpy
   - pytorch
+  - torchvision
   - pip
   - pip:
     - pytorch-lightning
+    - smplx==0.1.28
+    - pyrender
+    - opencv-python
+    - scikit-image
+    - einops
+    - timm
+    - dill
+    # - git+https://github.com/mattloper/chumpy
+
+    # For running tracking on video files in the future
+    # - git+https://github.com/brjathu/PHALP.git
+
+    # Shoudln't be needed but keep for now
+    - yacs
+
+  # Training purpose
+    - rich
+    - pyrootutils
     - webdataset

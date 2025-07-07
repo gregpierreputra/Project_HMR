@@ -1,11 +1,12 @@
 import os
 from typing import Tuple
 
-from pytorch_lightning.callbacks import ModelCheckpoint, RichProgressBar, LearningRateMonitor
+from pytorch_lightning.callbacks import ModelCheckpoint, RichProgressBar
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning import Trainer
 
 from hmr.datasets import DataModule
+from hmr.model.hmr import HMR
 from hmr.utils.misc_logger import get_logger
 
 # Directory
@@ -23,22 +24,24 @@ def train() -> Tuple[dict, dict]:
     log.info("Instantiating data module with training and validation dataset")
     
     data_module = DataModule()
+
+    log.info("Successfully instantiated data module!")
     
     # Setup model
     log.info("Instantiating model {}".format(""))
 
-    model = ""
+    model = HMR()
 
     # Setup Tensorboard logger
-    log.info("Instantiating Tensorboard logger for output location: {}".format(
-        os.path.join(_OUTPUT_DIRECTORY, 'tensorboard')
-    ))
+    # log.info("Instantiating Tensorboard logger for output location: {}".format(
+    #     os.path.join(_OUTPUT_DIRECTORY, 'tensorboard')
+    # ))
 
-    logger = TensorBoardLogger(
-        os.path.join(_OUTPUT_DIRECTORY, 'tensorboard'),
-        name='',
-        version='',
-        default_hp_metric=False)
+    # logger = TensorBoardLogger(
+    #     os.path.join(_OUTPUT_DIRECTORY, 'tensorboard'),
+    #     name='',
+    #     version='',
+    #     default_hp_metric=False)
 
     # Setup callbacks
     # Feel free to change any settings, this is just a base setup - Greg | 30-06-2025 
@@ -66,15 +69,16 @@ def train() -> Tuple[dict, dict]:
         "pytorch_lightning.Trainer"))
     
     trainer = Trainer(
-        accelerator="",
-        max_epochs="",
-        logger="",
-        log_every_n_steps="",
+        accelerator="gpu",
+        max_epochs=3,
+        log_every_n_steps=5,
         callbacks=callbacks
     )
 
+    log.info("Starting the trainer.")
     # Call the trainer
     trainer.fit(model, datamodule=data_module)
+    log.info("Training done!")
 
 def main():
     # Train the model - encapsulate in helper function for future added functionality

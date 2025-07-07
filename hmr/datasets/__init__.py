@@ -2,7 +2,7 @@ import pytorch_lightning as pl
 import webdataset as wds
 from torch.utils.data import DataLoader
 
-from motion_capture_dataset import MotionCaptureDataset
+from .motion_capture_dataset import MotionCaptureDataset
 
 def load_web_dataset(
         dataset_url: str,

@@ -112,7 +112,7 @@ class Discriminator(nn.Module):
 
         # -- Overall body pose distribution --
         # 1st Layer
-        self.discriminator_body_fc1 = nn.Linear(in_feautres = 32 * self.number_of_joints, 
+        self.discriminator_body_fc1 = nn.Linear(in_features = 32 * self.number_of_joints, 
                                                 out_features = 1024)
         nn.init.xavier_uniform_(self.discriminator_body_fc1.weight)
         nn.init.zeros_(self.discriminator_body_fc1.bias)
