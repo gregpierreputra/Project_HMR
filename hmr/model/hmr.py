@@ -52,8 +52,18 @@ class HMR(pl.LightningModule):
         # Toggle hyperparameter saving
         self.save_hyperparameters(logger=False, ignore=['init_renderer'])
 
-        # Load the VitBackbone pretrained weights
-        vitpose_state_dict = torch.load(_VITPOSE_BACKBONE_PRETRAINED_WEIGHTS_PATH, map_location='cpu')
+        # Load the ViTBackbone state dictionary
+        vitpose_state_dict = torch.load(_VITPOSE_BACKBONE_PRETRAINED_WEIGHTS_PATH,
+                                        map_location='cpu')['state_dict']
+        
+        # Weights are stored in dictionary called state_dict, and prefixed with 'backbone.'. Remove them
+        vitpose_parsed_state_dict = {}
+        for k,v in vitpose_state_dict.items():
+            if k.startswith('backbone.'):
+                new_key = k[len('backbone.'):]
+                vitpose_parsed_state_dict[new_key] = v
+            else:
+                vitpose_parsed_state_dict[k] = v
     
         # Create the ViTBackbone feature extractor
         # Matching the variable values to those utilized in HMR2
@@ -67,8 +77,7 @@ class HMR(pl.LightningModule):
         )
         
         # Load the pretrained weights for the ViTBackbone
-        self.backbone.load_state_dict(torch.load(vitpose_state_dict, 
-                                                 map_location='cpu')['state_dict'])
+        missing_keys, unexpected_keys = self.backbone.load_state_dict(vitpose_parsed_state_dict)
 
         # Create SMPL head
         self.smpl_head = SMPLTransformerDecoderHead(smpl_mean_params_path=_SMPL_MEAN_PARAMETERS_PATH)
