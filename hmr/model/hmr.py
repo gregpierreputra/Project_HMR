@@ -17,16 +17,18 @@ from typing import Tuple, Dict
 _PERSONAL_BASE_DIR = "/home/greg/Monash_MDN_Projects/HMR_Misc"
 
 # Must be defined  
-_VITPOSE_BACKBONE_PRETRAINED_WEIGHTS_PATH = os.path.join(_PERSONAL_BASE_DIR, "vitpose_backbone.pth")
+_VITPOSE_BACKBONE_PRETRAINED_WEIGHTS_PATH = os.path.join(_PERSONAL_BASE_DIR, "vitpose_small_backbone.pth")
 
 # Can be accessed by using wget on the following link
 # e.g: wget https://people.eecs.berkeley.edu/~jathushan/projects/4dhumans/hmr2_data.tar.gz
-_SMPL_MODEL_PATH = os.path.join(_PERSONAL_BASE_DIR, "smpl")
+_SMPL_MODEL_PATH = os.path.join(_PERSONAL_BASE_DIR, "smpl/models")
 _SMPL_MEAN_PARAMETERS_PATH = os.path.join(_PERSONAL_BASE_DIR, "smpl_mean_params.npz")
 _SMPL_JOINT_REGRESSOR_EXTRA_PATH = os.path.join(_PERSONAL_BASE_DIR, "SMPL_to_J19.pkl")
 
 _TRAIN_LEARNING_RATE = 1e-5
 _TRAIN_WEIGHT_DECAY = 1e-4
+_TRAIN_GRAD_CLIP_VALUE = 1.0
+_TRAIN_LOG_STEPS = 100
 
 _MODEL_IMAGE_SIZE = 256
 
@@ -53,31 +55,27 @@ class HMR(pl.LightningModule):
         self.save_hyperparameters(logger=False, ignore=['init_renderer'])
 
         # Load the ViTBackbone state dictionary
+        # Utilize the weights for ViTPose Small model extracted by Agi 
         vitpose_state_dict = torch.load(_VITPOSE_BACKBONE_PRETRAINED_WEIGHTS_PATH,
-                                        map_location='cpu')['state_dict']
-        
-        # Weights are stored in dictionary called state_dict, and prefixed with 'backbone.'. Remove them
-        vitpose_parsed_state_dict = {}
-        for k,v in vitpose_state_dict.items():
-            if k.startswith('backbone.'):
-                new_key = k[len('backbone.'):]
-                vitpose_parsed_state_dict[new_key] = v
-            else:
-                vitpose_parsed_state_dict[k] = v
+                                        map_location='cpu')
     
         # Create the ViTBackbone feature extractor
         # Matching the variable values to those utilized in HMR2
         self.backbone = ViTBackbone(
             img_size=(256, 192),
-            embed_dim=1280,
-            depth=32,
-            num_heads=16,
+            patch_size=16,
+            embed_dim=384,
+            depth=12,
+            num_heads=12,
+            ratio=1,
+            use_checkpoint=False,
+            mlp_ratio=4,
             qkv_bias=True,
-            drop_path_rate=0.55
+            drop_path_rate=0.1,
         )
         
         # Load the pretrained weights for the ViTBackbone
-        missing_keys, unexpected_keys = self.backbone.load_state_dict(vitpose_parsed_state_dict)
+        self.backbone.load_state_dict(vitpose_state_dict, strict=False)
 
         # Create SMPL head
         self.smpl_head = SMPLTransformerDecoderHead(smpl_mean_params_path=_SMPL_MEAN_PARAMETERS_PATH)
@@ -131,9 +129,12 @@ class HMR(pl.LightningModule):
         return optimizer_model, optimizer_discriminator
     
     def forward_step(self,
-                     batch: Dict) -> Dict:
+                     batch: Dict,
+                     train: bool = False) -> Dict:
         """
         Run a forward step of the network
+        
+        Although unused, the train variable is necessary to prevent a TypeError from being thrown during training
 
         Arguments:
             batch (Dict)    : Dictionary containing batch data
@@ -263,3 +264,120 @@ class HMR(pl.LightningModule):
             output['losses'] = losses
 
             return loss
+        
+    def forward(self, batch: Dict) -> Dict:
+        """
+        Run a forward step of the network in val mode
+        Args:
+            batch (Dict): Dictionary containing batch data
+        Returns:
+            Dict: Dictionary containing the regression output
+        """
+        return self.forward_step(batch, train=False)
+    
+    def training_step_discriminator(self, batch: Dict,
+                                    body_pose: torch.Tensor,
+                                    betas: torch.Tensor,
+                                    optimizer: torch.optim.Optimizer) -> torch.Tensor:
+        """
+        Run a discriminator training step
+        Args:
+            batch (Dict): Dictionary containing mocap batch data
+            body_pose (torch.Tensor): Regressed body pose from current step
+            betas (torch.Tensor): Regressed betas from current step
+            optimizer (torch.optim.Optimizer): Discriminator optimizer
+        Returns:
+            torch.Tensor: Discriminator loss
+        """
+        batch_size = body_pose.shape[0]
+        gt_body_pose = batch['body_pose']
+        gt_betas = batch['betas']
+
+        gt_rotmat = aa_to_rotmat(gt_body_pose.view(-1,3)).view(batch_size, -1, 3, 3)
+        disc_fake_out = self.discriminator(body_pose.detach(), betas.detach())
+        
+        loss_fake = ((disc_fake_out - 0.0) ** 2).sum() / batch_size
+        disc_real_out = self.discriminator(gt_rotmat, gt_betas)
+        
+        loss_real = ((disc_real_out - 1.0) ** 2).sum() / batch_size
+        loss_disc = loss_fake + loss_real
+        
+        loss = _LOSS_WEIGHTS_DICTIONARY['ADVERSARIAL'] * loss_disc
+        
+        optimizer.zero_grad()
+        
+        self.manual_backward(loss)
+        
+        optimizer.step()
+        
+        return loss_disc.detach()
+
+
+    def training_step(self, joint_batch: Dict) -> Dict:
+        """
+        Run a full training step
+        Args:
+            joint_batch (Dict): Dictionary containing image and mocap batch data
+            batch_idx (int): Unused.
+            batch_idx (torch.Tensor): Unused.
+        Returns:
+            Dict: Dictionary containing regression output.
+        """
+        batch = joint_batch['img']
+        mocap_batch = joint_batch['mocap']
+
+        optimizer = self.optimizers(use_pl_optimizer=True)
+        if _LOSS_WEIGHTS_DICTIONARY['ADVERSARIAL'] > 0:
+            optimizer, optimizer_disc = optimizer
+
+        batch_size = batch['img'].shape[0]
+        output = self.forward_step(batch, train=True)
+        pred_smpl_params = output['pred_smpl_params']
+        
+        # if self.cfg.get('UPDATE_GT_SPIN', False):
+        #     self.update_batch_gt_spin(batch, output)
+        loss = self.compute_loss(batch, output, train=True)
+        
+        if _LOSS_WEIGHTS_DICTIONARY['ADVERSARIAL'] > 0:
+            disc_out = self.discriminator(pred_smpl_params['body_pose'].reshape(batch_size, -1), pred_smpl_params['betas'].reshape(batch_size, -1))
+            loss_adv = ((disc_out - 1.0) ** 2).sum() / batch_size
+            loss = loss + _LOSS_WEIGHTS_DICTIONARY['ADVERSARIAL'] * loss_adv
+
+        optimizer.zero_grad()
+
+        self.manual_backward(loss)
+
+        # Clip gradient
+        if _TRAIN_GRAD_CLIP_VALUE > 0:
+            gn = torch.nn.utils.clip_grad_norm_(self.get_parameters(), _TRAIN_GRAD_CLIP_VALUE, error_if_nonfinite=True)
+            self.log("Train/Gradient Normalization", gn, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+
+        optimizer.step()
+        
+        if _LOSS_WEIGHTS_DICTIONARY['ADVERSARIAL']> 0:
+            loss_disc = self.training_step_discriminator(mocap_batch, 
+                                                         pred_smpl_params['body_pose'].reshape(batch_size, -1), 
+                                                         pred_smpl_params['betas'].reshape(batch_size, -1), 
+                                                         optimizer_disc)
+            output['losses']['loss_gen'] = loss_adv
+            output['losses']['loss_disc'] = loss_disc
+
+        self.log('Train/Loss', output['losses']['loss'], on_step=True, on_epoch=True, prog_bar=True, logger=False)
+
+        return output
+
+    # def validation_step(self, batch: Dict) -> Dict:
+    #     """
+    #     Run a validation step and log to Tensorboard
+    #     Args:
+    #         batch (Dict): Dictionary containing batch data
+    #         batch_idx (int): Unused.
+    #     Returns:
+    #         Dict: Dictionary containing regression output.
+    #     """
+    #     output = self.forward_step(batch, train=False)
+    #     loss = self.compute_loss(batch, output, train=False)
+        
+    #     output['loss'] = loss
+
+    #     return output

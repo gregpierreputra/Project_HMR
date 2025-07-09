@@ -10,11 +10,17 @@ from hmr.model.hmr import HMR
 from hmr.utils.misc_logger import get_logger
 
 # Directory
-_OUTPUT_DIRECTORY = ""
+_TRAIN_BASE_OUTPUT_DIRECTORY = "/home/greg/Monash_MDN_Projects/HMR_Train"
+_TRAIN_MODEL_CHECKPOINT_PATH = os.path.join(_TRAIN_BASE_OUTPUT_DIRECTORY, "model_checkpoints")
+
+# Hardcoded training variables
+_TRAIN_ACCELERATOR = 'cpu'
+_TRAIN_MAX_EPOCH_VALUE = 100
+_TRAIN_LOG_EVERY_N_STEPS = 5
 
 # Checkpoint callback hardcoded variables
-_CHECKPOINT_CALLBACK_CHECKPOINT_STEPS = 5000
-_CHECKPOINT_CALLBACK_SAVE_TOP_K_MODEL = 2
+_CHECKPOINT_CALLBACK_CHECKPOINT_STEPS = 2
+_CHECKPOINT_CALLBACK_SAVE_TOP_K = 1
 
 log = get_logger(__name__)
 
@@ -28,33 +34,21 @@ def train() -> Tuple[dict, dict]:
     log.info("Successfully instantiated data module!")
     
     # Setup model
-    log.info("Instantiating model {}".format(""))
+    log.info("Instantiating model {}".format("HMR"))
 
     model = HMR()
 
-    # Setup Tensorboard logger
-    # log.info("Instantiating Tensorboard logger for output location: {}".format(
-    #     os.path.join(_OUTPUT_DIRECTORY, 'tensorboard')
-    # ))
-
-    # logger = TensorBoardLogger(
-    #     os.path.join(_OUTPUT_DIRECTORY, 'tensorboard'),
-    #     name='',
-    #     version='',
-    #     default_hp_metric=False)
+    # Setup MLFlow logger
 
     # Setup callbacks
     # Feel free to change any settings, this is just a base setup - Greg | 30-06-2025 
     log.info("Instantiating checkpoint callback, and learning rate monitor")
     
     checkpoint_callback = ModelCheckpoint(
-        dirpath=os.path.join(
-            _OUTPUT_DIRECTORY,
-            'checkpoints'),
-        filename="{epoch}-{val_dice:.2f}",
+        dirpath=_TRAIN_MODEL_CHECKPOINT_PATH,
         every_n_train_steps=_CHECKPOINT_CALLBACK_CHECKPOINT_STEPS,
         save_last=True,
-        save_top_k=_CHECKPOINT_CALLBACK_SAVE_TOP_K_MODEL)
+        save_top_k=_CHECKPOINT_CALLBACK_SAVE_TOP_K)
     
     learning_rate_monitor = RichProgressBar()
     
@@ -69,9 +63,9 @@ def train() -> Tuple[dict, dict]:
         "pytorch_lightning.Trainer"))
     
     trainer = Trainer(
-        accelerator="gpu",
-        max_epochs=3,
-        log_every_n_steps=5,
+        accelerator=_TRAIN_ACCELERATOR,
+        max_epochs=_TRAIN_MAX_EPOCH_VALUE,
+        log_every_n_steps=_TRAIN_LOG_EVERY_N_STEPS,
         callbacks=callbacks
     )
 
