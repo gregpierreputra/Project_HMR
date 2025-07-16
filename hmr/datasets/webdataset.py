@@ -6,6 +6,7 @@ import webdataset as wds
 import numpy as np
 import torch
 import braceexpand
+from webdataset.compat import WebDataset
 
 from hmr.datasets.utils import get_example, expand_to_aspect_ratio
 from hmr.datasets.smplh_prob_filter import poses_check_probable, load_amass_hist_smooth
@@ -84,15 +85,17 @@ def expand_urls(urls: str | List[str]) -> List[str]:
             if not Path(u).exists():
                 raise FileNotFoundError(u)
             expanded_urls.append(u)
-    return expand_urls
+    return expanded_urls
 
 
 def load_tars_as_webdataset(
     urls: str | List[str],
     train: bool,
+    amass_poses_hist100_path: str,
     resampled=False,
     epoch_size=None,
     cache_dir=None,
+    shuffle_size=4000,
     SCALE_FACTOR: float = 0.3,
     ROT_FACTOR: int = 30,
     TRANS_FACTOR: float = 0.02,
@@ -103,7 +106,7 @@ def load_tars_as_webdataset(
     EXTREME_CROP_AUG_RATE: float = 0.10,
     EXTREME_CROP_AUG_LEVEL: float = 1,
     **kwargs,
-) -> wds.WebDataset:
+) -> WebDataset:
     """
     Loads the dataset from a webdataset tar file.
     """
@@ -167,7 +170,7 @@ def load_tars_as_webdataset(
                 item["data.pyd"]["has_betas"] = False
         return item
 
-    amass_poses_hist100_smooth = load_amass_hist_smooth()
+    amass_poses_hist100_smooth = load_amass_hist_smooth(amass_poses_hist100_path)
 
     def supress_bad_poses(item):
         has_body_pose = item["data.pyd"]["has_body_pose"]
@@ -206,15 +209,17 @@ def load_tars_as_webdataset(
     def corrupt_filter(sample):
         return sample["__key__"] not in _CORRUPT_KEYS
 
-    dataset = wds.WebDataset(
+    shardshuffle = 100 if train else False
+
+    dataset: WebDataset = WebDataset(
         expand_urls(urls),
         nodesplitter=wds.split_by_node,
-        shardshuffle=True,
+        shardshuffle=shardshuffle,
         resampled=resampled,
         cache_dir=cache_dir,
     ).select(corrupt_filter)
     if train:
-        dataset = dataset.shuffle(100)
+        dataset = dataset.shuffle(shuffle_size)
     dataset = dataset.decode("rgb8").rename(jpg="jpg;jpeg;png")
 
     # Process the dataset
@@ -312,6 +317,8 @@ def process_webdataset_tar_item(
     use_skimage_antialias=False,
     border_mode=cv2.BORDER_CONSTANT,
 ):
+    do_augmentation = True if train else False
+    
     # Read data from item
     key = item["__key__"]
     image = item["jpg"]
@@ -381,7 +388,7 @@ def process_webdataset_tar_item(
         IMG_SIZE,
         MEAN,
         STD,
-        train,
+        do_augmentation,
         SCALE_FACTOR=SCALE_FACTOR,
         ROT_FACTOR=ROT_FACTOR,
         TRANS_FACTOR=TRANS_FACTOR,

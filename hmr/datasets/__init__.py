@@ -1,112 +1,117 @@
-from typing import Optional
-
 from pathlib import Path
+from typing import List, Optional
+
 import pytorch_lightning as pl
-import webdataset as wds
+from webdataset.compat import WebDataset
 from torch.utils.data import DataLoader
 
-from .motion_capture_dataset import MotionCaptureDataset
+from hmr.datasets.motion_capture_dataset import MotionCaptureDataset
+from hmr.datasets.webdataset import load_tars_as_webdataset
 
+BASE_DATA_PATH = Path("/opt/ml/data/MDN")
 
-def load_web_dataset(
-    dataset_url: str,
-    resampled: bool = True,
-    shardshuffle: bool = True,
-    shuffle_value: int = 2,
-):
-    return wds.WebDataset(
-        dataset_url, resampled=resampled, shardshuffle=shardshuffle
-    ).shuffle(shuffle_value)
+IMAGE_DATASETS = {
+    "COCO-TRAIN-2014-VITPOSE-REPLICATE-PRUNED12": {
+        "urls": str(
+            BASE_DATA_PATH
+            / "hmr2_training_data/dataset_tars/coco-train-2014-vitpose-pruned/{000000..000044}.tar"
+        ),
+        "epoch_size": 45_000,
+    },
+    "COCO-TRAIN-2014-WMASK-PRUNED": {
+        "urls": str(
+            BASE_DATA_PATH
+            / "hmr2_training_data/dataset_tars/coco-train-2014-pruned/{000000..000017}.tar"
+        ),
+        "epoch_size": 18_000,
+    },
+    "COCO-VAL": {
+        "urls": str(
+            BASE_DATA_PATH
+            / "hmr2_training_data/dataset_tars/coco-val/{000000..000000}.tar"
+        ),
+        "epoch_size": None,
+    },
+}
+
+MOCAP_DATASET_FILE = str(BASE_DATA_PATH / "cmu_mocap.npz")
+
+DEFAULT_AUG_PARAMS = {
+    "SCALE_FACTOR": 0.3,
+    "ROT_FACTOR": 30,
+    "TRANS_FACTOR": 0.02,
+    "COLOR_SCALE": 0.2,
+    "ROT_AUG_RATE": 0.6,
+    "DO_FLIP": True,
+    "FLIP_AUG_RATE": 0.5,
+    "EXTREME_CROP_AUG_RATE": 0.10,
+    "EXTREME_CROP_AUG_LEVEL": 1,
+}
 
 
 class DataModule(pl.LightningDataModule):
-    # REQUIRES CONFIGURATION
-    # Base path to retrieve the cmu_mocap.npz file locally
-    _hmr_training_data_base_path = Path("/opt/ml/data/HMR2")
-    _hmr_eval_data_base_path = Path("/opt/ml/data/HMR2")
-
-    # Hardcoded values for testing purposes
-    _test_epoch_value = 2
-    _test_shuffle_value = 2
-
-    # -----
-
-    # Training: Image datasets
-
-    # _mpi_inf_train_wds_url = os.path.join(
-    #     _hmr_training_data_base_path, "mpi-inf-train-pruned/{000000..00006}.tar"
-    # )
-    # # _mpi_inf_train_wds_url = "mpi-inf-train-pruned/{000000..00006}.tar"
-    # _h36m_wmask_train_wds_url = (
-    #     "h36m-train/{000000..000312}.tar"
-    # )
-    # _mpii_wmask_train_wds_url = (
-    #     "mpii-train/{000000..000009}.tar"
-    # )
-    # _coco_2014_wmask_train_wds_url = "coco-train-2014-pruned/{000000..000017}.tar"
-    _coco_2014_vitpose_replicate_pruned_train_wds_url = (
-        _hmr_training_data_base_path
-        / "coco-train-2014-vitpose-pruned/{000000..000044}.tar"
-    )
-    # _ava_midframes_train_wds_url = "ava-train-midframes-1fps-vitpose/{000000..000092}.tar"
-    # _aic_wmask_train_wds_url = (
-    #     "aic-train-vitpose/{000000..000104}.tar"
-    # )
-    # _insta_wmask_train_wds_url = "insta-train-vitpose-replicate/{000000..003657}.tar"
-
-    # Training: Motion capture dataset
-    _cmu_mocap_train_wds_url = str(_hmr_training_data_base_path / "cmu_mocap.npz")
-
-    # Validation dataset
-    _coco_val_wds_url = str(_hmr_eval_data_base_path / "coco-val/{000000..000000}.tar")
-
     def __init__(
         self,
-        training_batch_size: int = 10,
-        training_number_of_workers: int = 1,
-        training_prefetch_factor: int = 2,
-        training_number_of_samples: int = 10,
+        train_dataset_name: str,
+        val_dataset_name: str,
+        mocap_datafile_path: str,
+        amass_poses_hist100_path: str,
+        batch_size: int = 10,
+        num_workers: int = 2,
+        prefetch_factor: int = 2,
+        mocap_num_train_samples: int = 10,
     ) -> None:
         super().__init__()
+        self.train_dataset_name = train_dataset_name
+        self.val_dataset_name = val_dataset_name
+        self.mocap_datafile_path = mocap_datafile_path
+        self.amass_poses_hist100_path = amass_poses_hist100_path
 
         # Initialize dataset variables
         self.training_dataset = None
         self.validation_dataset = None
         self.test_dataset = None
-        self.motion_capture_dataset = None
+        self.mocap_dataset = None
 
         # Initialize general class variables
-        self.training_batch_size = training_batch_size
-        self.training_number_of_workers = training_number_of_workers
-        self.training_prefetch_factor = training_prefetch_factor
-        self.training_mocap_batch_size = (
-            training_number_of_samples * training_batch_size
-        )
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+        self.prefetch_factor = prefetch_factor
+        self.mocap_batch_size = mocap_num_train_samples * batch_size
+
+        self._dataset_initialized = False
 
     def __str__(self):
-        return "Successfully loaded all of the data!"
+        if self._dataset_initialized:
+            return "Successfully loaded all of the data!"
 
-    def setup(self, stage: Optional[str] = None) -> None:
+    def setup(self, *args, **kwargs) -> None:
         """
         Load the necessary training data using the WebLoader
-
-        Although unused, stage input variable necessary to prevent a TypeError from being called due to unexpected keyword argument
 
         Training dataset will utilise the Ava Midframes training set
         Validation dataset will utilise the COCO validation set
         """
         if self.training_dataset is None:
-            self.training_dataset = (
-                load_web_dataset(self._mpi_inf_train_wds_url)
-                .with_epoch(self._test_epoch_value)
-                .shuffle(self._test_shuffle_value)
-            )
-            self.motion_capture_dataset = MotionCaptureDataset(
-                self._cmu_mocap_train_wds_url
+            train_dataset_conf = IMAGE_DATASETS[self.train_dataset_name]
+            self.training_dataset: WebDataset = load_tars_as_webdataset(
+                urls=train_dataset_conf["urls"],
+                train=True,
+                amass_poses_hist100_path=self.amass_poses_hist100_path,
+                epoch_size=train_dataset_conf["epoch_size"],
+                shuffle_size=4000,
+                **DEFAULT_AUG_PARAMS,
             )
 
-            self.validation_dataset = load_web_dataset(self._coco_val_wds_url).shuffle(
-                self._test_shuffle_value
+            self.mocap_dataset = MotionCaptureDataset(self.mocap_datafile_path)
+
+            val_dataset_conf = IMAGE_DATASETS[self.val_dataset_name]
+            self.validation_dataset: WebDataset = load_tars_as_webdataset(
+                urls=val_dataset_conf["urls"],
+                train=False,
+                amass_poses_hist100_path=self.amass_poses_hist100_path,
+                epoch_size=None,
+                shuffle_size=0,
             )
 
     def train_dataloader(self) -> DataLoader:
@@ -118,17 +123,17 @@ class DataModule(pl.LightningDataModule):
         """
         train_dataloader = DataLoader(
             self.training_dataset,
-            self.training_batch_size,
+            self.batch_size,
             drop_last=True,
-            num_workers=self.training_number_of_workers,
-            prefetch_factor=self.training_prefetch_factor,
+            num_workers=self.num_workers,
+            prefetch_factor=self.prefetch_factor,
         )
         motion_capture_dataloader = DataLoader(
-            self.motion_capture_dataset,
-            self.training_mocap_batch_size,
+            self.mocap_dataset,
+            self.mocap_batch_size,
             shuffle=True,
             drop_last=True,
-            num_workers=self.training_number_of_workers,
+            num_workers=1,
         )
 
         training_dataloaders = {
@@ -147,9 +152,9 @@ class DataModule(pl.LightningDataModule):
         """
         validation_dataloader = DataLoader(
             self.validation_dataset,
-            self.training_batch_size,
+            self.batch_size,
             drop_last=True,
-            num_workers=self.training_number_of_workers,
+            num_workers=self.num_workers,
         )
 
         return validation_dataloader

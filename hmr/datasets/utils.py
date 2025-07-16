@@ -10,7 +10,6 @@ from skimage.filters import gaussian
 import random
 import cv2
 from typing import List, Dict, Tuple
-from yacs.config import CfgNode
 
 
 def expand_to_aspect_ratio(input_shape, target_aspect_ratio=None):

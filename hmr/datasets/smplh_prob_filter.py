@@ -62,13 +62,13 @@ POSE_RANGE_MIN = -np.pi
 POSE_RANGE_MAX = np.pi
 
 # Create 21x100x100x100 histogram of all 21 AMASS body pose joints using `create_pose_hist(amass_poses, nbins=100)`
-AMASS_HIST100_PATH = "hmr2_training_data/amass_poses_hist100_SMPL+H_G.npy"
-if not os.path.exists(AMASS_HIST100_PATH):
-    AMASS_HIST100_PATH = "/shared/shubham/code/hmr2023/amass_poses_hist100_SMPL+H_G.npy"
-if not os.path.exists(AMASS_HIST100_PATH):
-    AMASS_HIST100_PATH = (
-        "/fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy"
-    )
+# AMASS_HIST100_PATH = "hmr2_training_data/amass_poses_hist100_SMPL+H_G.npy"
+# if not os.path.exists(AMASS_HIST100_PATH):
+#     AMASS_HIST100_PATH = "/shared/shubham/code/hmr2023/amass_poses_hist100_SMPL+H_G.npy"
+# if not os.path.exists(AMASS_HIST100_PATH):
+#     AMASS_HIST100_PATH = (
+#         "/fsx/shubham/code/stable-humans/notebooks/amass_poses_hist100_SMPL+H_G.npy"
+#     )
 
 
 def create_pose_hist(poses: np.ndarray, nbins: int = 100) -> np.ndarray:
@@ -92,8 +92,8 @@ def create_pose_hist(poses: np.ndarray, nbins: int = 100) -> np.ndarray:
     return Hs
 
 
-def load_amass_hist_smooth(sigma=2) -> torch.Tensor:
-    amass_poses_hist100 = np.load(AMASS_HIST100_PATH)
+def load_amass_hist_smooth(amass_poses_hist100_path: str, sigma=2) -> torch.Tensor:
+    amass_poses_hist100 = np.load(amass_poses_hist100_path)
     amass_poses_hist100 = torch.from_numpy(amass_poses_hist100)
     assert amass_poses_hist100.shape == (21, 100, 100, 100)
 
