@@ -1,6 +1,6 @@
 from typing import Optional
 
-import os
+from pathlib import Path
 import pytorch_lightning as pl
 import webdataset as wds
 from torch.utils.data import DataLoader
@@ -22,8 +22,8 @@ def load_web_dataset(
 class DataModule(pl.LightningDataModule):
     # REQUIRES CONFIGURATION
     # Base path to retrieve the cmu_mocap.npz file locally
-    _hmr_training_data_base_path = "/opt/ml/data/HMR2/HMR_Train_Data"
-    _hmr_eval_data_base_path = "/opt/ml/data/HMR2/HMR_Val_Data"
+    _hmr_training_data_base_path = Path("/opt/ml/data/HMR2")
+    _hmr_eval_data_base_path = Path("/opt/ml/data/HMR2")
 
     # Hardcoded values for testing purposes
     _test_epoch_value = 2
@@ -32,33 +32,33 @@ class DataModule(pl.LightningDataModule):
     # -----
 
     # Training: Image datasets
-    _mpi_inf_train_wds_url = os.path.join(
-        _hmr_training_data_base_path, "mpi-inf-train-pruned/{000000..00006}.tar"
+
+    # _mpi_inf_train_wds_url = os.path.join(
+    #     _hmr_training_data_base_path, "mpi-inf-train-pruned/{000000..00006}.tar"
+    # )
+    # # _mpi_inf_train_wds_url = "mpi-inf-train-pruned/{000000..00006}.tar"
+    # _h36m_wmask_train_wds_url = (
+    #     "h36m-train/{000000..000312}.tar"
+    # )
+    # _mpii_wmask_train_wds_url = (
+    #     "mpii-train/{000000..000009}.tar"
+    # )
+    # _coco_2014_wmask_train_wds_url = "coco-train-2014-pruned/{000000..000017}.tar"
+    _coco_2014_vitpose_replicate_pruned_train_wds_url = (
+        _hmr_training_data_base_path
+        / "coco-train-2014-vitpose-pruned/{000000..000044}.tar"
     )
-    # _mpi_inf_train_wds_url = "hmr2_training_data/dataset_tars/mpi-inf-train-pruned/{000000..00006}.tar"
-    _h36m_wmask_train_wds_url = (
-        "hmr2_training_data/dataset_tars/h36m-train/{000000..000312}.tar"
-    )
-    _mpii_wmask_train_wds_url = (
-        "hmr2_training_data/dataset_tars/mpii-train/{000000..000009}.tar"
-    )
-    _coco_2014_wmask_train_wds_url = "hmr2_training_data/dataset_tars/coco-train-2014-pruned/{000000..000017}.tar"
-    _coco_2014_vitpose_replicate_pruned_train_wds_url = "hmr2_training_data/dataset_tars/coco-train-2014-vitpose-pruned/{000000..000044}.tar"
-    _ava_midframes_train_wds_url = "hmr2_training_data/dataset_tars/ava-train-midframes-1fps-vitpose/{000000..000092}.tar"
-    _aic_wmask_train_wds_url = (
-        "hmr2_training_data/dataset_tars/aic-train-vitpose/{000000..000104}.tar"
-    )
-    _insta_wmask_train_wds_url = "hmr2_training_data/dataset_tars/insta-train-vitpose-replicate/{000000..003657}.tar"
+    # _ava_midframes_train_wds_url = "ava-train-midframes-1fps-vitpose/{000000..000092}.tar"
+    # _aic_wmask_train_wds_url = (
+    #     "aic-train-vitpose/{000000..000104}.tar"
+    # )
+    # _insta_wmask_train_wds_url = "insta-train-vitpose-replicate/{000000..003657}.tar"
 
     # Training: Motion capture dataset
-    _cmu_mocap_train_wds_url = os.path.join(
-        _hmr_training_data_base_path, "cmu_mocap.npz"
-    )
+    _cmu_mocap_train_wds_url = str(_hmr_training_data_base_path / "cmu_mocap.npz")
 
     # Validation dataset
-    _coco_val_wds_url = os.path.join(
-        _hmr_eval_data_base_path, "coco-val/{000000..000000}.tar"
-    )
+    _coco_val_wds_url = str(_hmr_eval_data_base_path / "coco-val/{000000..000000}.tar")
 
     def __init__(
         self,
@@ -95,7 +95,7 @@ class DataModule(pl.LightningDataModule):
         Training dataset will utilise the Ava Midframes training set
         Validation dataset will utilise the COCO validation set
         """
-        if self.training_dataset == None:
+        if self.training_dataset is None:
             self.training_dataset = (
                 load_web_dataset(self._mpi_inf_train_wds_url)
                 .with_epoch(self._test_epoch_value)
@@ -105,9 +105,9 @@ class DataModule(pl.LightningDataModule):
                 self._cmu_mocap_train_wds_url
             )
 
-            self.validation_dataset = load_web_dataset(
-                self._coco_val_wds_url
-            ).shuffle(self._test_shuffle_value)
+            self.validation_dataset = load_web_dataset(self._coco_val_wds_url).shuffle(
+                self._test_shuffle_value
+            )
 
     def train_dataloader(self) -> DataLoader:
         """

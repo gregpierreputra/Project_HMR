@@ -10,9 +10,7 @@ class AdaptiveLayerNorm1D(torch.nn.Module):
         if data_dim <= 0:
             raise ValueError(f"data_dim must be positive, but got {data_dim}")
         if norm_cond_dim <= 0:
-            raise ValueError(
-                f"norm_cond_dim must be positive, but got {norm_cond_dim}"
-            )
+            raise ValueError(f"norm_cond_dim must be positive, but got {norm_cond_dim}")
         self.norm = torch.nn.LayerNorm(
             data_dim
         )  # TODO: Check if elementwise_affine=True is correct
@@ -29,12 +27,8 @@ class AdaptiveLayerNorm1D(torch.nn.Module):
 
         # Add singleton dimensions to alpha and beta
         if x.dim() > 2:
-            alpha = alpha.view(
-                alpha.shape[0], *([1] * (x.dim() - 2)), alpha.shape[1]
-            )
-            beta = beta.view(
-                beta.shape[0], *([1] * (x.dim() - 2)), beta.shape[1]
-            )
+            alpha = alpha.view(alpha.shape[0], *([1] * (x.dim() - 2)), alpha.shape[1])
+            beta = beta.view(beta.shape[0], *([1] * (x.dim() - 2)), beta.shape[1])
 
         return x * (1 + alpha) + beta
 
@@ -59,9 +53,7 @@ def normalization_layer(norm: Optional[str], dim: int, norm_cond_dim: int = -1):
     elif norm == "layer":
         return torch.nn.LayerNorm(dim)
     elif norm == "ada":
-        assert norm_cond_dim > 0, (
-            f"norm_cond_dim must be positive, got {norm_cond_dim}"
-        )
+        assert norm_cond_dim > 0, f"norm_cond_dim must be positive, got {norm_cond_dim}"
         return AdaptiveLayerNorm1D(dim, norm_cond_dim)
     elif norm is None:
         return torch.nn.Identity()

@@ -77,9 +77,7 @@ class Attention(nn.Module):
 
     def forward(self, x):
         qkv = self.to_qkv(x).chunk(3, dim=-1)
-        q, k, v = map(
-            lambda t: rearrange(t, "b n (h d) -> b h n d", h=self.heads), qkv
-        )
+        q, k, v = map(lambda t: rearrange(t, "b n (h d) -> b h n d", h=self.heads), qkv)
 
         dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
 
@@ -92,9 +90,7 @@ class Attention(nn.Module):
 
 
 class CrossAttention(nn.Module):
-    def __init__(
-        self, dim, context_dim=None, heads=8, dim_head=64, dropout=0.0
-    ):
+    def __init__(self, dim, context_dim=None, heads=8, dim_head=64, dropout=0.0):
         super().__init__()
         inner_dim = dim_head * heads
         project_out = not (heads == 1 and dim_head == dim)
@@ -162,15 +158,9 @@ class TransformerCrossAttn(nn.Module):
             self.layers.append(
                 nn.ModuleList(
                     [
-                        PreNorm(
-                            dim, sa, norm=norm, norm_cond_dim=norm_cond_dim
-                        ),
-                        PreNorm(
-                            dim, ca, norm=norm, norm_cond_dim=norm_cond_dim
-                        ),
-                        PreNorm(
-                            dim, ff, norm=norm, norm_cond_dim=norm_cond_dim
-                        ),
+                        PreNorm(dim, sa, norm=norm, norm_cond_dim=norm_cond_dim),
+                        PreNorm(dim, ca, norm=norm, norm_cond_dim=norm_cond_dim),
+                        PreNorm(dim, ff, norm=norm, norm_cond_dim=norm_cond_dim),
                     ]
                 )
             )
@@ -195,8 +185,7 @@ class DropTokenDropout(nn.Module):
         super().__init__()
         if p < 0 or p > 1:
             raise ValueError(
-                "dropout probability has to be between 0 and 1, "
-                "but got {}".format(p)
+                "dropout probability has to be between 0 and 1, " "but got {}".format(p)
             )
         self.p = p
 
@@ -215,8 +204,7 @@ class ZeroTokenDropout(nn.Module):
         super().__init__()
         if p < 0 or p > 1:
             raise ValueError(
-                "dropout probability has to be between 0 and 1, "
-                "but got {}".format(p)
+                "dropout probability has to be between 0 and 1, " "but got {}".format(p)
             )
         self.p = p
 
@@ -277,16 +265,12 @@ class TransformerDecoder(nn.Module):
             context_dim=context_dim,
         )
 
-    def forward(
-        self, inp: torch.Tensor, *args, context=None, context_list=None
-    ):
+    def forward(self, inp: torch.Tensor, *args, context=None, context_list=None):
         x = self.to_token_embedding(inp)
         b, n, _ = x.shape
 
         x = self.dropout(x)
         x += self.pos_embedding[:, :n]
 
-        x = self.transformer(
-            x, *args, context=context, context_list=context_list
-        )
+        x = self.transformer(x, *args, context=context, context_list=context_list)
         return x

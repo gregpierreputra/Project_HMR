@@ -132,9 +132,7 @@ class Block(nn.Module):
         )
 
         # NOTE: drop path for stochastic depth, we shall see if this is better than dropout here
-        self.drop_path = (
-            DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
-        )
+        self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
         self.norm2 = norm_layer(dim)
         mlp_hidden_dim = int(dim * mlp_ratio)
         self.mlp = Mlp(
@@ -153,16 +151,12 @@ class Block(nn.Module):
 class PatchEmbed(nn.Module):
     """Image to Patch Embedding"""
 
-    def __init__(
-        self, img_size=224, patch_size=16, in_chans=3, embed_dim=768, ratio=1
-    ):
+    def __init__(self, img_size=224, patch_size=16, in_chans=3, embed_dim=768, ratio=1):
         super().__init__()
         img_size = to_2tuple(img_size)
         patch_size = to_2tuple(patch_size)
         num_patches = (
-            (img_size[1] // patch_size[1])
-            * (img_size[0] // patch_size[0])
-            * (ratio**2)
+            (img_size[1] // patch_size[1]) * (img_size[0] // patch_size[0]) * (ratio**2)
         )
         self.patch_shape = (
             int(img_size[0] // patch_size[0] * ratio),
@@ -216,9 +210,9 @@ class HybridEmbed(nn.Module):
                 training = backbone.training
                 if training:
                     backbone.eval()
-                o = self.backbone(
-                    torch.zeros(1, in_chans, img_size[0], img_size[1])
-                )[-1]
+                o = self.backbone(torch.zeros(1, in_chans, img_size[0], img_size[1]))[
+                    -1
+                ]
                 feature_size = o.shape[-2:]
                 feature_dim = o.shape[1]
                 backbone.train(training)
@@ -293,9 +287,7 @@ class ViTBackbone(nn.Module):
         num_patches = self.patch_embed.num_patches
 
         # since the pretraining model has class token
-        self.pos_embed = nn.Parameter(
-            torch.zeros(1, num_patches + 1, embed_dim)
-        )
+        self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, embed_dim))
 
         dpr = [
             x.item() for x in torch.linspace(0, drop_path_rate, depth)

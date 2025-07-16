@@ -73,12 +73,10 @@ class SMPLTransformerDecoderHead(nn.Module):
         init_body_pose = torch.from_numpy(
             mean_params["pose"].astype(np.float32)
         ).unsqueeze(0)
-        init_betas = torch.from_numpy(
-            mean_params["shape"].astype("float32")
-        ).unsqueeze(0)
-        init_cam = torch.from_numpy(
-            mean_params["cam"].astype(np.float32)
-        ).unsqueeze(0)
+        init_betas = torch.from_numpy(mean_params["shape"].astype("float32")).unsqueeze(
+            0
+        )
+        init_cam = torch.from_numpy(mean_params["cam"].astype(np.float32)).unsqueeze(0)
         self.register_buffer("init_body_pose", init_body_pose)
         self.register_buffer("init_betas", init_betas)
         self.register_buffer("init_cam", init_cam)
@@ -104,9 +102,9 @@ class SMPLTransformerDecoderHead(nn.Module):
         for i in range(self.smpl_ief_iters):
             # Input token to transformer is zero token
             if self.input_is_mean_shape:
-                token = torch.cat(
-                    [pred_body_pose, pred_betas, pred_cam], dim=1
-                )[:, None, :]
+                token = torch.cat([pred_body_pose, pred_betas, pred_cam], dim=1)[
+                    :, None, :
+                ]
             else:
                 token = torch.zeros(batch_size, 1, 1).to(x.device)
 
