@@ -18,6 +18,10 @@ class TrainArgument:
     val_dataset_name: str
     mocap_datafile_path: str
     amass_poses_hist100_path: str
+    smpl_model_path: str
+    smpl_mean_params_path: str
+    smpl_joint_regressor_extra_path: str
+    vitpose_backbone_pretrained_path: str
     checkpoint_path: str
     accelerator: str
     max_epochs: int
@@ -30,6 +34,17 @@ class TrainArgument:
     mlflow_experiment_name: str
     mlflow_uri: str
     mlflow_run_name: str = ""
+    learning_rate: float = 1e-5
+    weight_decay: float = 1e-4
+    grad_clip_val: float = 1.0
+    log_steps: int = 100
+    focal_length_scale: int = 5000
+    loss_3d_keypoint_weight: float = 0.05
+    loss_2d_keypoint_weight: float = 0.01
+    loss_global_orient_weight: float = 0.001
+    loss_body_pose_weight: float = 0.001
+    loss_betas_weight: float = 0.0005
+    loss_adversarial_weight: float = 0.0005
 
 
 def _cli_parser():
@@ -57,6 +72,30 @@ def _cli_parser():
         type=str,
         default="/opt/ml/data/MDN/hmr2_training_data/amass_poses_hist100_SMPL+H_G.npy",
         help="Path to amass poses dataset",
+    )
+    parser.add_argument(
+        "--smpl_model_path",
+        type=str,
+        default="/opt/ml/misc/MDN/HMR2/mpips_smplify_public_v2/smplify_public/code/models",
+        help="Path to the SMPL model",
+    )
+    parser.add_argument(
+        "--smpl_mean_params_path",
+        type=str,
+        default="/opt/ml/misc/MDN/HMR2/smpl_mean_params.npz",
+        help="Path to SMPL mean parameters",
+    )
+    parser.add_argument(
+        "--smpl_joint_regressor_extra_path",
+        type=str,
+        default="/opt/ml/misc/MDN/HMR2/SMPL_to_J19.pkl",
+        help="Path to extra joint regressor file",
+    )
+    parser.add_argument(
+        "--vitpose_backbone_pretrained_path",
+        type=str,
+        default="/opt/ml/misc/MDN/HMR2/vitpose_small_backbone.pth",
+        help="Path to pretrained ViTPose backbone",
     )
     parser.add_argument(
         "--checkpoint_path",
@@ -127,6 +166,54 @@ def _cli_parser():
         default="",
         help="Optional name of the MLflow run",
     )
+    parser.add_argument(
+        "--learning_rate", type=float, default=1e-5, help="Learning rate for optimizer"
+    )
+    parser.add_argument(
+        "--weight_decay", type=float, default=1e-4, help="Weight decay for optimizer"
+    )
+    parser.add_argument(
+        "--grad_clip_val", type=float, default=1.0, help="Gradient clipping value"
+    )
+    parser.add_argument(
+        "--log_steps", type=int, default=100, help="Interval for logging steps"
+    )
+    parser.add_argument(
+        "--focal_length_scale", type=int, default=5000, help="Camera focal length scale"
+    )
+    parser.add_argument(
+        "--loss_3d_keypoint_weight",
+        type=float,
+        default=0.05,
+        help="Weight for 3D keypoint loss",
+    )
+    parser.add_argument(
+        "--loss_2d_keypoint_weight",
+        type=float,
+        default=0.01,
+        help="Weight for 2D keypoint loss",
+    )
+    parser.add_argument(
+        "--loss_global_orient_weight",
+        type=float,
+        default=0.001,
+        help="Weight for global orientation loss",
+    )
+    parser.add_argument(
+        "--loss_body_pose_weight",
+        type=float,
+        default=0.001,
+        help="Weight for body pose loss",
+    )
+    parser.add_argument(
+        "--loss_betas_weight", type=float, default=0.0005, help="Weight for betas loss"
+    )
+    parser.add_argument(
+        "--loss_adversarial_weight",
+        type=float,
+        default=0.0005,
+        help="Weight for adversarial loss",
+    )
 
     args = parser.parse_args(namespace=TrainArgument)
 
@@ -159,7 +246,23 @@ def train(train_args: TrainArgument) -> Tuple[dict, dict]:
     # Setup model
     log.info("Instantiating HMRLightningModule")
 
-    model = HMRLightningModule()
+    model = HMRLightningModule(
+        smpl_model_path=train_args.smpl_model_path,
+        smpl_mean_params_path=train_args.smpl_mean_params_path,
+        smpl_joint_regressor_extra_path=train_args.smpl_joint_regressor_extra_path,
+        vitpose_backbone_pretrained_path=train_args.vitpose_backbone_pretrained_path,
+        learning_rate=train_args.learning_rate,
+        weight_decay=train_args.weight_decay,
+        grad_clip_val=train_args.grad_clip_val,
+        log_steps=train_args.log_steps,
+        focal_length_scale=train_args.focal_length_scale,
+        loss_3d_keypoint_weight=train_args.loss_3d_keypoint_weight,
+        loss_2d_keypoint_weight=train_args.loss_2d_keypoint_weight,
+        loss_global_orient_weight=train_args.loss_global_orient_weight,
+        loss_body_pose_weight=train_args.loss_body_pose_weight,
+        loss_betas_weight=train_args.loss_betas_weight,
+        loss_adversarial_weight=train_args.loss_adversarial_weight,
+    )
 
     # Setup MLFlow logger
     mlflow_logger = MLFlowLogger(
