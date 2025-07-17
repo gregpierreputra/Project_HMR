@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Tuple
 from dataclasses import dataclass, asdict
 from argparse import ArgumentParser
+from pathlib import Path
 
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import MLFlowLogger
@@ -271,8 +272,11 @@ def train(train_args: TrainArgument) -> Tuple[dict, dict]:
     # Feel free to change any settings, this is just a base setup - Greg | 30-06-2025
     log.info("Instantiating checkpoint callback, and learning rate monitor")
 
+    checkpoint_path = Path(train_args.checkpoint_path) / train_args.mlflow_run_name
+    checkpoint_path.mkdir(parents=True)
+
     checkpoint_callback = ModelCheckpoint(
-        dirpath=train_args.checkpoint_path,
+        dirpath=checkpoint_path,
         save_last=True,
         save_top_k=train_args.checkpoint_topk,
         monitor="train-loss",
