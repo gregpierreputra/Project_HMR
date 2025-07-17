@@ -95,14 +95,22 @@ class HMRDataModule(pl.LightningDataModule):
         """
         if self.training_dataset is None:
             train_dataset_conf = IMAGE_DATASETS[self.train_dataset_name]
+            epoch_size = train_dataset_conf["epoch_size"]
+            
+            # formula to predict dataset length, so that validation step would not be 
+            # skipped in pytorch lightning Trainer
+            predicted_dataset_length = ((epoch_size // self.batch_size) - (
+                self.num_workers - 1
+            )) * self.batch_size
+
             self.training_dataset: WebDataset = load_tars_as_webdataset(
                 urls=train_dataset_conf["urls"],
                 train=True,
                 amass_poses_hist100_path=self.amass_poses_hist100_path,
-                epoch_size=train_dataset_conf["epoch_size"] // self.num_workers,
+                epoch_size=epoch_size // self.num_workers,
                 shuffle_size=4000,
                 **DEFAULT_AUG_PARAMS,
-            ).with_length(train_dataset_conf["epoch_size"])
+            ).with_length(predicted_dataset_length)
 
             self.mocap_dataset = MotionCaptureDataset(self.mocap_datafile_path)
 
