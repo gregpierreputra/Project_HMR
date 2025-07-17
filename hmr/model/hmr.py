@@ -417,7 +417,7 @@ class HMRLightningModule(pl.LightningModule):
                 batch_size=batch_size,
             )
 
-        return output
+        return output["losses"]["loss"]
 
     def validation_step(self, batch: Dict) -> Dict:
         """
@@ -431,7 +431,7 @@ class HMRLightningModule(pl.LightningModule):
         output = self.forward_step(batch, train=False)
         loss = self.compute_loss(batch, output)
 
-        batch_size = batch["img"]
+        batch_size = batch["img"].shape[0]
 
         output["loss"] = loss
         for loss_name, loss_value in output["losses"].items():
@@ -446,7 +446,7 @@ class HMRLightningModule(pl.LightningModule):
                 batch_size=batch_size,
             )
 
-        return output
+        return loss
 
 
 def _test():
