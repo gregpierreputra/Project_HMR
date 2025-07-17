@@ -169,7 +169,7 @@ class Discriminator(nn.Module):
         poses = poses.reshape(bin, -1)
         poses_all = self.discriminator_body_fc1(poses)
         poses_all = self.relu(poses_all)
-        poses_all = self.discriminator_betas_fc2(poses_all)
+        poses_all = self.discriminator_body_fc2(poses_all)
         poses_all = self.relu(poses_all)
         poses_all_out = self.discriminator_body_out(poses_all)
 
