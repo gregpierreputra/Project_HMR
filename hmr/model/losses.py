@@ -147,7 +147,7 @@ class ParameterLoss(nn.Module):
             torch.Tensor : L2 parameter loss, or also known as mean-squared error parameter loss.
         """
         # Retrieve batch size from the projected parameter tensor
-        batch_size = projected_parameter[0]
+        batch_size = projected_parameter.shape[0]
 
         # Calculate number of dimensions by taking the length of the shape of a projected parameter tensor
         number_of_dimensions = len(projected_parameter.shape)
