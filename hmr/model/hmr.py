@@ -38,7 +38,7 @@ class HMRLightningModule(pl.LightningModule):
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
         self.grad_clip_val = grad_clip_val
-        self.focal_length_scale = (focal_length_scale,)
+        self.focal_length_scale = focal_length_scale
         self.loss_3d_keypoint_weight = loss_3d_keypoint_weight
         self.loss_2d_keypoint_weight = loss_2d_keypoint_weight
         self.loss_smpl_weight_dict = {
