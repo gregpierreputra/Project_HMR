@@ -233,7 +233,7 @@ def train(train_args: TrainArgument) -> Tuple[dict, dict]:
         mocap_datafile_path=train_args.mocap_datafile_path,
         amass_poses_hist100_path=train_args.amass_poses_hist100_path,
         batch_size=train_args.batch_size,
-        num_workers=train_args.batch_size,
+        num_workers=train_args.num_workers,
         prefetch_factor=train_args.prefetch_factor,
         mocap_num_train_samples=train_args.mocap_num_train_samples,
     )
