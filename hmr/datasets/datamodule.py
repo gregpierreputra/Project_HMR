@@ -102,7 +102,7 @@ class HMRDataModule(pl.LightningDataModule):
                 epoch_size=train_dataset_conf["epoch_size"] // self.num_workers,
                 shuffle_size=4000,
                 **DEFAULT_AUG_PARAMS,
-            )
+            ).with_length(train_dataset_conf["epoch_size"])
 
             self.mocap_dataset = MotionCaptureDataset(self.mocap_datafile_path)
 
