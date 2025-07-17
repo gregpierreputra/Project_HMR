@@ -18,7 +18,7 @@ class HMRLightningModule(pl.LightningModule):
         smpl_model_path: str,
         smpl_mean_params_path: str,
         smpl_joint_regressor_extra_path: str,
-        vipose_backbone_pretrained_path: str,
+        vitpose_backbone_pretrained_path: str,
         learning_rate: float = 1e-5,
         weight_decay: float = 1e-4,
         grad_clip_val: float = 1.0,
@@ -55,7 +55,7 @@ class HMRLightningModule(pl.LightningModule):
         # Load the ViTBackbone state dictionary
         # Utilize the weights for ViTPose Small model extracted by Agi
         vitpose_state_dict = torch.load(
-            vipose_backbone_pretrained_path, map_location="cpu"
+            vitpose_backbone_pretrained_path, map_location="cpu"
         )
 
         # Create the ViTBackbone feature extractor
