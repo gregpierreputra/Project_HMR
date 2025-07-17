@@ -138,7 +138,6 @@ class HMRDataModule(pl.LightningDataModule):
             num_workers=1,
         )
 
-
         training_dataloaders = {
             "img": train_dataloader,
             "mocap": motion_capture_dataloader,
