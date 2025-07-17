@@ -440,7 +440,7 @@ class HMRLightningModule(pl.LightningModule):
             Dict: Dictionary containing regression output.
         """
         output = self.forward_step(batch, train=False)
-        loss = self.compute_loss(batch, output, train=False)
+        loss = self.compute_loss(batch, output)
 
         self.log("val-loss", loss, on_epoch=True)
 
