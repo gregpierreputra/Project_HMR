@@ -112,6 +112,7 @@ class HMRDataModule(pl.LightningDataModule):
                 amass_poses_hist100_path=self.amass_poses_hist100_path,
                 epoch_size=None,
                 shuffle_size=0,
+                resampled=False,
             )
 
     def train_dataloader(self) -> DataLoader:
@@ -153,8 +154,8 @@ class HMRDataModule(pl.LightningDataModule):
         validation_dataloader = DataLoader(
             self.validation_dataset,
             self.batch_size,
-            drop_last=True,
-            num_workers=self.num_workers,
+            drop_last=False,
+            num_workers=1,  # there might be dataset that only has one shard/tarfile, so adding more workers will throw an error
         )
 
         return validation_dataloader

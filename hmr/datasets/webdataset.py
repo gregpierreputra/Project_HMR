@@ -2,7 +2,6 @@ from typing import List
 from pathlib import Path
 
 import cv2
-import webdataset as wds
 import numpy as np
 import torch
 import braceexpand
@@ -203,18 +202,14 @@ def load_tars_as_webdataset(
         return item
 
     # Load the dataset
-    if epoch_size is not None:
+    if train:
         resampled = True
 
     def corrupt_filter(sample):
         return sample["__key__"] not in _CORRUPT_KEYS
 
-    shardshuffle = 100 if train else False
-
     dataset: WebDataset = WebDataset(
         expand_urls(urls),
-        nodesplitter=wds.split_by_node,
-        shardshuffle=shardshuffle,
         resampled=resampled,
         cache_dir=cache_dir,
     ).select(corrupt_filter)
