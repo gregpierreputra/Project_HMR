@@ -1,65 +1,61 @@
-import torch
-import pytorch_lightning as pl
 import os
+from typing import Dict, Tuple
 
-from ..utils.geometry import perspective_projection, aa_to_rotmat
-from .backbone.vitpose import ViTBackbone
-from .smpl_head.transformer import SMPLTransformerDecoderHead
-from .discriminator import Discriminator
+import pytorch_lightning as pl
+import torch
 
-from .losses import Keypoint2DLoss, Keypoint3DLoss, ParameterLoss
-
-from .smpl.smpl_wrapper import SMPL
-
-from typing import Tuple, Dict
-
-# Personal (simply for testing purposes)
-_PERSONAL_BASE_DIR = "/home/greg/Monash_MDN_Projects/HMR_Misc"
-
-# Must be defined
-_VITPOSE_BACKBONE_PRETRAINED_WEIGHTS_PATH = os.path.join(
-    _PERSONAL_BASE_DIR, "vitpose_small_backbone.pth"
-)
-
-# Can be accessed by using wget on the following link
-# e.g: wget https://people.eecs.berkeley.edu/~jathushan/projects/4dhumans/hmr2_data.tar.gz
-_SMPL_MODEL_PATH = os.path.join(_PERSONAL_BASE_DIR, "smpl/models")
-_SMPL_MEAN_PARAMETERS_PATH = os.path.join(_PERSONAL_BASE_DIR, "smpl_mean_params.npz")
-_SMPL_JOINT_REGRESSOR_EXTRA_PATH = os.path.join(_PERSONAL_BASE_DIR, "SMPL_to_J19.pkl")
-
-_TRAIN_LEARNING_RATE = 1e-5
-_TRAIN_WEIGHT_DECAY = 1e-4
-_TRAIN_GRAD_CLIP_VALUE = 1.0
-_TRAIN_LOG_STEPS = 100
-
-_MODEL_IMAGE_SIZE = 256
-
-_FORWARD_FOCAL_LENGTH = 5000
-
-_LOSS_3D_KEYPOINT_WEIGHT = 0.05
-_LOSS_2D_KEYPOINT_WEIGHT = 0.01
-_LOSS_WEIGHTS_DICTIONARY = {
-    "GLOBAL_ORIENT": 0.001,
-    "BODY_POSE": 0.001,
-    "BETAS": 0.0005,
-    "ADVERSARIAL": 0.0005,
-}
+from hmr.utils.geometry import aa_to_rotmat, perspective_projection
+from hmr.model.backbone.vitpose import ViTBackbone
+from hmr.model.discriminator import Discriminator
+from hmr.model.losses import Keypoint2DLoss, Keypoint3DLoss, ParameterLoss
+from hmr.model.smpl.smpl_wrapper import SMPL
+from hmr.model.smpl_head.transformer import SMPLTransformerDecoderHead
 
 
-class HMR(pl.LightningModule):
-    def __init__(self, init_renderer: bool = True):
+class HMRLightningModule(pl.LightningModule):
+    def __init__(
+        self,
+        smpl_model_path: str,
+        smpl_mean_params_path: str,
+        smpl_joint_regressor_extra_path: str,
+        vipose_backbone_pretrained_path: str,
+        learning_rate: float = 1e-5,
+        weight_decay: float = 1e-4,
+        grad_clip_val: float = 1.0,
+        log_steps: int = 100,
+        focal_length_scale: int = 5000,
+        loss_3d_keypoint_weight: float = 0.05,
+        loss_2d_keypoint_weight: float = 0.01,
+        loss_global_orient_weight: float = 0.001,
+        loss_body_pose_weight: float = 0.001,
+        loss_betas_weight: float = 0.0005,
+        loss_adversarial_weight: float = 0.0005,
+    ):
         """
         Setup the HMR module
         """
         super().__init__()
 
-        # Toggle hyperparameter saving
-        self.save_hyperparameters(logger=False, ignore=["init_renderer"])
+        self.learning_rate = learning_rate
+        self.weight_decay = weight_decay
+        self.grad_clip_val = grad_clip_val
+        self.log_steps = (log_steps,)
+        self.focal_length_scale = (focal_length_scale,)
+        self.loss_3d_keypoint_weight = loss_3d_keypoint_weight
+        self.loss_2d_keypoint_weight = loss_2d_keypoint_weight
+        self.loss_smpl_weight_dict = {
+            "GLOBAL_ORIENT": loss_global_orient_weight,
+            "BODY_POSE": loss_body_pose_weight,
+            "BETAS": loss_betas_weight,
+            "ADVERSARIAL": loss_adversarial_weight,
+        }
+
+        self._image_size = 256
 
         # Load the ViTBackbone state dictionary
         # Utilize the weights for ViTPose Small model extracted by Agi
         vitpose_state_dict = torch.load(
-            _VITPOSE_BACKBONE_PRETRAINED_WEIGHTS_PATH, map_location="cpu"
+            vipose_backbone_pretrained_path, map_location="cpu"
         )
 
         # Create the ViTBackbone feature extractor
@@ -78,11 +74,11 @@ class HMR(pl.LightningModule):
         )
 
         # Load the pretrained weights for the ViTBackbone
-        self.backbone.load_state_dict(vitpose_state_dict, strict=False)
+        self.backbone.load_state_dict(vitpose_state_dict, strict=True)
 
         # Create SMPL head
         self.smpl_head = SMPLTransformerDecoderHead(
-            smpl_mean_params_path=_SMPL_MEAN_PARAMETERS_PATH
+            smpl_mean_params_path=smpl_mean_params_path
         )
 
         # Create discriminator
@@ -95,12 +91,10 @@ class HMR(pl.LightningModule):
 
         # Instantiate SMPL model
         self.smpl = SMPL(
-            model_path=_SMPL_MODEL_PATH,
-            mean_params=_SMPL_MEAN_PARAMETERS_PATH,
-            joint_regressor_extra=_SMPL_JOINT_REGRESSOR_EXTRA_PATH,
+            model_path=smpl_model_path,
+            mean_params=smpl_mean_params_path,
+            joint_regressor_extra=smpl_joint_regressor_extra_path,
         )
-
-        # Setup renderer
 
         # Disabling automatic optimization due to use of adversarial training
         self.automatic_optimization = False
@@ -126,18 +120,18 @@ class HMR(pl.LightningModule):
         param_groups = [
             {
                 "params": filter(lambda p: p.requires_grad, self.get_parameters()),
-                "lr": _TRAIN_LEARNING_RATE,
+                "lr": self.learning_rate,
             }
         ]
 
         optimizer_model = torch.optim.AdamW(
-            params=param_groups, weight_decay=_TRAIN_WEIGHT_DECAY
+            params=param_groups, weight_decay=self.weight_decay
         )
 
         optimizer_discriminator = torch.optim.AdamW(
             params=self.discriminator.parameters(),
-            lr=_TRAIN_LEARNING_RATE,
-            weight_decay=_TRAIN_WEIGHT_DECAY,
+            lr=self.learning_rate,
+            weight_decay=self.weight_decay,
         )
 
         return optimizer_model, optimizer_discriminator
@@ -173,7 +167,7 @@ class HMR(pl.LightningModule):
         dtype = pred_smpl_params["body_pose"].dtype
 
         # Determine focal length based on predicted SMPL parameters
-        focal_length = _FORWARD_FOCAL_LENGTH * torch.ones(
+        focal_length = self.focal_length_scale * torch.ones(
             batch_size, 2, device=device, dtype=dtype
         )
 
@@ -181,7 +175,7 @@ class HMR(pl.LightningModule):
             [
                 pred_cam[:, 1],
                 pred_cam[:, 2],
-                2 * focal_length[:, 0] / (_MODEL_IMAGE_SIZE * pred_cam[:, 0] + 1e-9),
+                2 * focal_length[:, 0] / (self._image_size * pred_cam[:, 0] + 1e-9),
             ],
             dim=-1,
         )
@@ -217,7 +211,7 @@ class HMR(pl.LightningModule):
         pred_keypoints_2d = perspective_projection(
             pred_keypoints_3d,
             translation=pred_cam_t,
-            focal_length=focal_length / _MODEL_IMAGE_SIZE,
+            focal_length=focal_length / self._image_size,
         )
         output["pred_keypoints_2d"] = pred_keypoints_2d.reshape(batch_size, -1, 2)
 
@@ -270,32 +264,32 @@ class HMR(pl.LightningModule):
                 pred.reshape(batch_size, -1), gt.reshape(batch_size, -1), has_gt
             )
 
-            # Calculate the overall loss taking into consideration the weights we put on the different metrics
-            loss = (
-                _LOSS_3D_KEYPOINT_WEIGHT * loss_keypoints_3d
-                + _LOSS_2D_KEYPOINT_WEIGHT * loss_keypoints_2d
-                + sum(
-                    [
-                        loss_smpl_params[k] * _LOSS_WEIGHTS_DICTIONARY[k.upper()]
-                        for k in loss_smpl_params
-                    ]
-                )
+        # Calculate the overall loss taking into consideration the weights we put on the different metrics
+        loss = (
+            self.loss_3d_keypoint_weight * loss_keypoints_3d
+            + self.loss_2d_keypoint_weight * loss_keypoints_2d
+            + sum(
+                [
+                    loss_smpl_params[k] * self.loss_smpl_weight_dict[k.upper()]
+                    for k in loss_smpl_params
+                ]
             )
+        )
 
-            # Save all of the losses into a dictionary
-            losses = dict(
-                loss=loss.detach(),
-                loss_keypoints_2d=loss_keypoints_2d.detach(),
-                loss_keypoints_3d=loss_keypoints_3d.detach(),
-            )
+        # Save all of the losses into a dictionary
+        losses = dict(
+            loss=loss.detach(),
+            loss_keypoints_2d=loss_keypoints_2d.detach(),
+            loss_keypoints_3d=loss_keypoints_3d.detach(),
+        )
 
-            # Add the losses from the SMPL parameters into the losses dictionary
-            for k, v in loss_smpl_params.items():
-                losses["loss_" + k] = v.detach()
+        # Add the losses from the SMPL parameters into the losses dictionary
+        for k, v in loss_smpl_params.items():
+            losses["loss_" + k] = v.detach()
 
-            output["losses"] = losses
+        output["losses"] = losses
 
-            return loss
+        return loss
 
     def forward(self, batch: Dict) -> Dict:
         """
@@ -337,7 +331,7 @@ class HMR(pl.LightningModule):
         loss_real = ((disc_real_out - 1.0) ** 2).sum() / batch_size
         loss_disc = loss_fake + loss_real
 
-        loss = _LOSS_WEIGHTS_DICTIONARY["ADVERSARIAL"] * loss_disc
+        loss = self.loss_smpl_weight_dict["ADVERSARIAL"] * loss_disc
 
         optimizer.zero_grad()
 
@@ -361,7 +355,7 @@ class HMR(pl.LightningModule):
         mocap_batch = joint_batch["mocap"]
 
         optimizer = self.optimizers(use_pl_optimizer=True)
-        if _LOSS_WEIGHTS_DICTIONARY["ADVERSARIAL"] > 0:
+        if self.loss_smpl_weight_dict["ADVERSARIAL"] > 0:
             optimizer, optimizer_disc = optimizer
 
         batch_size = batch["img"].shape[0]
@@ -372,23 +366,23 @@ class HMR(pl.LightningModule):
         #     self.update_batch_gt_spin(batch, output)
         loss = self.compute_loss(batch, output, train=True)
 
-        if _LOSS_WEIGHTS_DICTIONARY["ADVERSARIAL"] > 0:
+        if self.loss_smpl_weight_dict["ADVERSARIAL"] > 0:
             disc_out = self.discriminator(
                 pred_smpl_params["body_pose"].reshape(batch_size, -1),
                 pred_smpl_params["betas"].reshape(batch_size, -1),
             )
             loss_adv = ((disc_out - 1.0) ** 2).sum() / batch_size
-            loss = loss + _LOSS_WEIGHTS_DICTIONARY["ADVERSARIAL"] * loss_adv
+            loss = loss + self.loss_smpl_weight_dict["ADVERSARIAL"] * loss_adv
 
         optimizer.zero_grad()
 
         self.manual_backward(loss)
 
         # Clip gradient
-        if _TRAIN_GRAD_CLIP_VALUE > 0:
+        if self.grad_clip_val > 0:
             gn = torch.nn.utils.clip_grad_norm_(
                 self.get_parameters(),
-                _TRAIN_GRAD_CLIP_VALUE,
+                self.grad_clip_val,
                 error_if_nonfinite=True,
             )
             self.log(
@@ -402,7 +396,7 @@ class HMR(pl.LightningModule):
 
         optimizer.step()
 
-        if _LOSS_WEIGHTS_DICTIONARY["ADVERSARIAL"] > 0:
+        if self.loss_smpl_weight_dict["ADVERSARIAL"] > 0:
             loss_disc = self.training_step_discriminator(
                 mocap_batch,
                 pred_smpl_params["body_pose"].reshape(batch_size, -1),
@@ -423,18 +417,44 @@ class HMR(pl.LightningModule):
 
         return output
 
-    # def validation_step(self, batch: Dict) -> Dict:
-    #     """
-    #     Run a validation step and log to Tensorboard
-    #     Args:
-    #         batch (Dict): Dictionary containing batch data
-    #         batch_idx (int): Unused.
-    #     Returns:
-    #         Dict: Dictionary containing regression output.
-    #     """
-    #     output = self.forward_step(batch, train=False)
-    #     loss = self.compute_loss(batch, output, train=False)
+    def validation_step(self, batch: Dict) -> Dict:
+        """
+        Run a validation step and log to Tensorboard
+        Args:
+            batch (Dict): Dictionary containing batch data
+            batch_idx (int): Unused.
+        Returns:
+            Dict: Dictionary containing regression output.
+        """
+        output = self.forward_step(batch, train=False)
+        loss = self.compute_loss(batch, output, train=False)
 
-    #     output['loss'] = loss
+        output["loss"] = loss
 
-    #     return output
+        return output
+
+
+def _main():
+    # Personal (simply for testing purposes)
+    _PERSONAL_BASE_DIR = "/opt/ml/misc/MDN/HMR2/"
+
+    # Must be defined
+    _VITPOSE_BACKBONE_PRETRAINED_WEIGHTS_PATH = os.path.join(
+        _PERSONAL_BASE_DIR, "vitpose_small_backbone.pth"
+    )
+
+    # Can be accessed by using wget on the following link
+    # e.g: wget https://people.eecs.berkeley.edu/~jathushan/projects/4dhumans/hmr2_data.tar.gz
+    _SMPL_MODEL_PATH = os.path.join(
+        _PERSONAL_BASE_DIR, "mpips_smplify_public_v2/smplify_public/code/models"
+    )
+    _SMPL_MEAN_PARAMETERS_PATH = os.path.join(
+        _PERSONAL_BASE_DIR, "smpl_mean_params.npz"
+    )
+    _SMPL_JOINT_REGRESSOR_EXTRA_PATH = os.path.join(
+        _PERSONAL_BASE_DIR, "SMPL_to_J19.pkl"
+    )
+
+
+if __name__ == "__main__":
+    _main()
