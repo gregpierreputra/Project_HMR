@@ -14,6 +14,10 @@ from hmr.utils.misc_logger import get_logger
 
 @dataclass
 class TrainArgument:
+    train_dataset_name: str
+    val_dataset_name: str
+    mocap_datafile_path: str
+    amass_poses_hist100_path: str
     checkpoint_path: str
     accelerator: str
     max_epochs: int
@@ -30,6 +34,30 @@ class TrainArgument:
 
 def _cli_parser():
     parser = ArgumentParser()
+    parser.add_argument(
+        "--train_dataset_name",
+        type=str,
+        default="COCO-TRAIN-2014-WMASK-PRUNED",
+        help="Name of the training dataset. See hmr/datasets/__init__.py for more information.",
+    )
+    parser.add_argument(
+        "--val_dataset_name",
+        type=str,
+        default="COCO-VAL",
+        help="Name of the val dataset. See hmr/datasets/__init__.py for more information.",
+    )
+    parser.add_argument(
+        "--mocap_datafile_path",
+        type=str,
+        default="/opt/ml/data/MDN/hmr2_training_data/cmu_mocap.npz",
+        help="Path for mocap dataset",
+    )
+    parser.add_argument(
+        "--amass_poses_hist100_path",
+        type=str,
+        default="/opt/ml/data/MDN/hmr2_training_data/amass_poses_hist100_SMPL+H_G.npy",
+        help="Path to amass poses dataset",
+    )
     parser.add_argument(
         "--checkpoint_path",
         type=str,
@@ -116,6 +144,10 @@ def train(train_args: TrainArgument) -> Tuple[dict, dict]:
     log.info("Instantiating data module with training and validation dataset")
 
     data_module = HMRDataModule(
+        train_dataset_name=train_args.train_dataset_name,
+        val_dataset_name=train_args.val_dataset_name,
+        mocap_datafile_path=train_args.mocap_datafile_path,
+        amass_poses_hist100_path=train_args.amass_poses_hist100_path,
         batch_size=train_args.batch_size,
         num_workers=train_args.batch_size,
         prefetch_factor=train_args.prefetch_factor,
