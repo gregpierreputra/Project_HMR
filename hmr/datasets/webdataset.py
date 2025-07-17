@@ -318,7 +318,7 @@ def process_webdataset_tar_item(
     border_mode=cv2.BORDER_CONSTANT,
 ):
     do_augmentation = True if train else False
-    
+
     # Read data from item
     key = item["__key__"]
     image = item["jpg"]
