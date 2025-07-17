@@ -37,7 +37,6 @@ class TrainArgument:
     learning_rate: float = 1e-5
     weight_decay: float = 1e-4
     grad_clip_val: float = 1.0
-    log_steps: int = 100
     focal_length_scale: int = 5000
     loss_3d_keypoint_weight: float = 0.05
     loss_2d_keypoint_weight: float = 0.01
@@ -176,9 +175,6 @@ def _cli_parser():
         "--grad_clip_val", type=float, default=1.0, help="Gradient clipping value"
     )
     parser.add_argument(
-        "--log_steps", type=int, default=100, help="Interval for logging steps"
-    )
-    parser.add_argument(
         "--focal_length_scale", type=int, default=5000, help="Camera focal length scale"
     )
     parser.add_argument(
@@ -254,7 +250,6 @@ def train(train_args: TrainArgument) -> Tuple[dict, dict]:
         learning_rate=train_args.learning_rate,
         weight_decay=train_args.weight_decay,
         grad_clip_val=train_args.grad_clip_val,
-        log_steps=train_args.log_steps,
         focal_length_scale=train_args.focal_length_scale,
         loss_3d_keypoint_weight=train_args.loss_3d_keypoint_weight,
         loss_2d_keypoint_weight=train_args.loss_2d_keypoint_weight,
@@ -279,6 +274,8 @@ def train(train_args: TrainArgument) -> Tuple[dict, dict]:
         dirpath=train_args.checkpoint_path,
         save_last=True,
         save_top_k=train_args.checkpoint_topk,
+        monitor="train-loss",
+        mode="min",
     )
 
     callbacks = [

@@ -22,7 +22,6 @@ class HMRLightningModule(pl.LightningModule):
         learning_rate: float = 1e-5,
         weight_decay: float = 1e-4,
         grad_clip_val: float = 1.0,
-        log_steps: int = 100,
         focal_length_scale: int = 5000,
         loss_3d_keypoint_weight: float = 0.05,
         loss_2d_keypoint_weight: float = 0.01,
@@ -39,7 +38,6 @@ class HMRLightningModule(pl.LightningModule):
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
         self.grad_clip_val = grad_clip_val
-        self.log_steps = (log_steps,)
         self.focal_length_scale = (focal_length_scale,)
         self.loss_3d_keypoint_weight = loss_3d_keypoint_weight
         self.loss_2d_keypoint_weight = loss_2d_keypoint_weight
@@ -386,12 +384,11 @@ class HMRLightningModule(pl.LightningModule):
                 error_if_nonfinite=True,
             )
             self.log(
-                "Train/Gradient Normalization",
+                "train-grad_norm",
                 gn,
                 on_step=True,
                 on_epoch=True,
                 prog_bar=True,
-                logger=True,
             )
 
         optimizer.step()
@@ -407,12 +404,29 @@ class HMRLightningModule(pl.LightningModule):
             output["losses"]["loss_disc"] = loss_disc
 
         self.log(
-            "Train/Loss",
+            "train-loss",
             output["losses"]["loss"],
             on_step=True,
             on_epoch=True,
             prog_bar=True,
-            logger=False,
+        )
+        self.log(
+            "train-loss_kp3d",
+            output["losses"]["loss_keypoints_3d"],
+            on_step=True,
+            on_epoch=True,
+        )
+        self.log(
+            "train-loss_adv",
+            output["losses"]["loss_gen"],
+            on_step=True,
+            on_epoch=True,
+        )
+        self.log(
+            "train-loss_disc",
+            output["losses"]["loss_disc"],
+            on_step=True,
+            on_epoch=True,
         )
 
         return output
@@ -428,6 +442,8 @@ class HMRLightningModule(pl.LightningModule):
         """
         output = self.forward_step(batch, train=False)
         loss = self.compute_loss(batch, output, train=False)
+
+        self.log("val-loss", loss, on_epoch=True)
 
         output["loss"] = loss
 
