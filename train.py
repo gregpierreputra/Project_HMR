@@ -296,6 +296,9 @@ def train(train_args: TrainArgument) -> Tuple[dict, dict]:
 
     log.info("Starting the trainer.")
 
+    # Log Hyperparameters
+    mlflow_logger.log_hyperparams(train_args)
+
     # Call the trainer
     trainer.fit(model, datamodule=data_module)
     log.info("Training done!")
