@@ -44,6 +44,7 @@ class Keypoint2DLoss(nn.Module):
             torch.Tensor: 2D keypoint loss
         """
         conf = ground_truth_keypoints_2d[:, :, -1].unsqueeze(-1).clone()
+        batch_size = conf.shape[0]
 
         loss = (
             conf
@@ -52,7 +53,7 @@ class Keypoint2DLoss(nn.Module):
             )
         ).sum(dim=(1, 2))
 
-        return loss.sum()
+        return loss.sum() / batch_size
 
 
 class Keypoint3DLoss(nn.Module):
@@ -95,6 +96,7 @@ class Keypoint3DLoss(nn.Module):
         Returns:
             torch.Tensor: 3D keypoint loss
         """
+        batch_size = projected_keypoints_3d.shape[0]
         ground_truth_keypoints_3d = ground_truth_keypoints_3d.clone()
 
         # For 3D projected keypoints, Remove 3D pelvis keypoint
@@ -119,7 +121,7 @@ class Keypoint3DLoss(nn.Module):
             )
         ).sum(dim=(1, 2))
 
-        return loss.sum()
+        return loss.sum() / batch_size
 
 
 class ParameterLoss(nn.Module):
@@ -164,4 +166,4 @@ class ParameterLoss(nn.Module):
             projected_parameter, ground_truth_parameter
         )
 
-        return loss_parameter.sum()
+        return loss_parameter.sum() / batch_size
