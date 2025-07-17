@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 from typing import Dict, Tuple
 
 import pytorch_lightning as pl
@@ -434,27 +434,22 @@ class HMRLightningModule(pl.LightningModule):
         return output
 
 
-def _main():
-    # Personal (simply for testing purposes)
-    _PERSONAL_BASE_DIR = "/opt/ml/misc/MDN/HMR2/"
+def _test():
+    base_dir = Path("/opt/ml/misc/MDN/HMR2")
+    vitpose_backbone_pretrained_path = str(base_dir / "vitpose_small_backbone.pth")
 
-    # Must be defined
-    _VITPOSE_BACKBONE_PRETRAINED_WEIGHTS_PATH = os.path.join(
-        _PERSONAL_BASE_DIR, "vitpose_small_backbone.pth"
-    )
+    # Can be obtained on the following link
+    # SMPL Model: https://smplify.is.tue.mpg.de/download.php 
+    #   (SMPLIFY_CODE_V2.ZIP or mpips_smplify_public_v2.zip)
+    # SMPL parameters and regressors: https://people.eecs.berkeley.edu/~jathushan/projects/4dhumans/hmr2_data.tar.gz
+    smpl_model_path = str(base_dir / "mpips_smplify_public_v2/smplify_public/code/models")
+    smpl_mean_params_path = str(base_dir / "smpl_mean_params.npz")
+    smpl_joint_regressor_extra_path = str(base_dir, "SMPL_to_J19.pkl")
 
-    # Can be accessed by using wget on the following link
-    # e.g: wget https://people.eecs.berkeley.edu/~jathushan/projects/4dhumans/hmr2_data.tar.gz
-    _SMPL_MODEL_PATH = os.path.join(
-        _PERSONAL_BASE_DIR, "mpips_smplify_public_v2/smplify_public/code/models"
+    hmr_lm = HMRLightningModule(
+        smpl_model_path=smpl_model_path,
+        smpl_mean_params_path=smpl_mean_params_path,
+        smpl_joint_regressor_extra_path=smpl_joint_regressor_extra_path,
+        vitpose_backbone_pretrained_path=vitpose_backbone_pretrained_path,
+        learning_rate=1e-5,
     )
-    _SMPL_MEAN_PARAMETERS_PATH = os.path.join(
-        _PERSONAL_BASE_DIR, "smpl_mean_params.npz"
-    )
-    _SMPL_JOINT_REGRESSOR_EXTRA_PATH = os.path.join(
-        _PERSONAL_BASE_DIR, "SMPL_to_J19.pkl"
-    )
-
-
-if __name__ == "__main__":
-    _main()
