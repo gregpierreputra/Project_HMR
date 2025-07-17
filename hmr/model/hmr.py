@@ -402,35 +402,18 @@ class HMRLightningModule(pl.LightningModule):
             output["losses"]["loss_gen"] = loss_adv
             output["losses"]["loss_disc"] = loss_disc
 
-        self.log(
-            "train-loss",
-            output["losses"]["loss"],
-            on_step=True,
-            on_epoch=True,
-            prog_bar=True,
-            batch_size=batch_size,
-        )
-        self.log(
-            "train-loss_kp3d",
-            output["losses"]["loss_keypoints_3d"],
-            on_step=True,
-            on_epoch=True,
-            batch_size=batch_size,
-        )
-        self.log(
-            "train-loss_adv",
-            output["losses"]["loss_gen"],
-            on_step=True,
-            on_epoch=True,
-            batch_size=batch_size,
-        )
-        self.log(
-            "train-loss_disc",
-            output["losses"]["loss_disc"],
-            on_step=True,
-            on_epoch=True,
-            batch_size=batch_size,
-        )
+        for loss_name, loss_value in output["losses"].items():
+            prog_bar = False
+            if loss_name == "loss":
+                prog_bar = True
+            self.log(
+                f"train-{loss_name}",
+                loss_value,
+                on_step=True,
+                on_epoch=True,
+                prog_bar=prog_bar,
+                batch_size=batch_size,
+            )
 
         return output
 
