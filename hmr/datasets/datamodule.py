@@ -98,7 +98,7 @@ class HMRDataModule(pl.LightningDataModule):
                 urls=train_dataset_conf["urls"],
                 train=True,
                 amass_poses_hist100_path=self.amass_poses_hist100_path,
-                epoch_size=train_dataset_conf["epoch_size"],
+                epoch_size=train_dataset_conf["epoch_size"] // self.num_workers,
                 shuffle_size=4000,
                 **DEFAULT_AUG_PARAMS,
             )
