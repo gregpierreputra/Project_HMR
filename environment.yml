@@ -21,3 +21,6 @@ dependencies:
     - dill
     - webdataset
     - git+https://github.com/mattloper/chumpy
+    - mlflow
+    - black
+    - ruff
