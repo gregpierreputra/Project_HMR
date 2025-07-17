@@ -84,7 +84,7 @@ class HMRLightningModule(pl.LightningModule):
 
         # Define loss functions
         self.keypoint_2d_loss = Keypoint2DLoss(loss_type="l1")
-        self.keypoint_3d_loss = Keypoint3DLoss(loss_type="l1")
+        # self.keypoint_3d_loss = Keypoint3DLoss(loss_type="l1")
         self.smpl_parameter_loss = ParameterLoss()
 
         # Instantiate SMPL model
@@ -238,11 +238,13 @@ class HMRLightningModule(pl.LightningModule):
         has_smpl_params = batch["has_smpl_params"]
         is_axis_angle = batch["smpl_params_is_axis_angle"]
 
-        # Compute 3D keypoint loss
+        # Compute 2D keypoint loss
         loss_keypoints_2d = self.keypoint_2d_loss(pred_keypoints_2d, gt_keypoints_2d)
-        loss_keypoints_3d = self.keypoint_3d_loss(
-            pred_keypoints_3d, gt_keypoints_3d, pelvis_id=25 + 14
-        )
+
+        # Compute 3D keypoint loss
+        # loss_keypoints_3d = self.keypoint_3d_loss(
+        #     pred_keypoints_3d, gt_keypoints_3d, pelvis_id=25 + 14
+        # )
 
         # Compute loss on SMPL parameters
         loss_smpl_params = {}
@@ -263,8 +265,8 @@ class HMRLightningModule(pl.LightningModule):
 
         # Calculate the overall loss taking into consideration the weights we put on the different metrics
         loss = (
-            self.loss_3d_keypoint_weight * loss_keypoints_3d
-            + self.loss_2d_keypoint_weight * loss_keypoints_2d
+            # self.loss_3d_keypoint_weight * loss_keypoints_3d
+            self.loss_2d_keypoint_weight * loss_keypoints_2d
             + sum(
                 [
                     loss_smpl_params[k] * self.loss_smpl_weight_dict[k.upper()]
@@ -277,7 +279,7 @@ class HMRLightningModule(pl.LightningModule):
         losses = dict(
             loss=loss.detach(),
             loss_keypoints_2d=loss_keypoints_2d.detach(),
-            loss_keypoints_3d=loss_keypoints_3d.detach(),
+            # loss_keypoints_3d=loss_keypoints_3d.detach(),
         )
 
         # Add the losses from the SMPL parameters into the losses dictionary
