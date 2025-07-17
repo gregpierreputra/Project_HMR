@@ -4,6 +4,7 @@ from typing import List, Optional
 import pytorch_lightning as pl
 from webdataset.compat import WebDataset
 from torch.utils.data import DataLoader
+from pytorch_lightning.utilities import CombinedLoader
 
 from hmr.datasets.motion_capture_dataset import MotionCaptureDataset
 from hmr.datasets.webdataset import load_tars_as_webdataset
@@ -115,7 +116,7 @@ class HMRDataModule(pl.LightningDataModule):
                 resampled=False,
             )
 
-    def train_dataloader(self) -> DataLoader:
+    def train_dataloader(self) -> CombinedLoader:
         """
         Setup the training DataLoader for both images and motion capture
 
@@ -137,12 +138,13 @@ class HMRDataModule(pl.LightningDataModule):
             num_workers=1,
         )
 
+
         training_dataloaders = {
             "img": train_dataloader,
             "mocap": motion_capture_dataloader,
         }
 
-        return training_dataloaders
+        return CombinedLoader(training_dataloaders, mode="min_size")
 
     def val_dataloader(self) -> DataLoader:
         """
