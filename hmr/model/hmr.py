@@ -433,9 +433,18 @@ class HMRLightningModule(pl.LightningModule):
 
         batch_size = batch["img"]
 
-        self.log("val-loss", loss, on_epoch=True, batch_size=batch_size)
-
         output["loss"] = loss
+        for loss_name, loss_value in output["losses"].items():
+            prog_bar = False
+            if loss_name == "loss":
+                prog_bar = True
+            self.log(
+                f"val-{loss_name}",
+                loss_value,
+                on_epoch=True,
+                prog_bar=prog_bar,
+                batch_size=batch_size,
+            )
 
         return output
 
