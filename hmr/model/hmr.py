@@ -408,24 +408,28 @@ class HMRLightningModule(pl.LightningModule):
             on_step=True,
             on_epoch=True,
             prog_bar=True,
+            batch_size=batch_size,
         )
         self.log(
             "train-loss_kp3d",
             output["losses"]["loss_keypoints_3d"],
             on_step=True,
             on_epoch=True,
+            batch_size=batch_size,
         )
         self.log(
             "train-loss_adv",
             output["losses"]["loss_gen"],
             on_step=True,
             on_epoch=True,
+            batch_size=batch_size,
         )
         self.log(
             "train-loss_disc",
             output["losses"]["loss_disc"],
             on_step=True,
             on_epoch=True,
+            batch_size=batch_size,
         )
 
         return output
@@ -442,7 +446,9 @@ class HMRLightningModule(pl.LightningModule):
         output = self.forward_step(batch, train=False)
         loss = self.compute_loss(batch, output)
 
-        self.log("val-loss", loss, on_epoch=True)
+        batch_size = batch["img"]
+
+        self.log("val-loss", loss, on_epoch=True, batch_size=batch_size)
 
         output["loss"] = loss
 
