@@ -12,7 +12,7 @@ from hmr.model.hmr import HMRLightningModule
 from hmr.utils.misc_logger import get_logger
 
 
-@dataclass
+@dataclass(kw_only=True)
 class TrainArgument:
     train_dataset_name: str
     val_dataset_name: str
@@ -33,17 +33,17 @@ class TrainArgument:
     checkpoint_topk: int
     mlflow_experiment_name: str
     mlflow_uri: str
-    mlflow_run_name: str = ""
-    learning_rate: float = 1e-5
-    weight_decay: float = 1e-4
-    grad_clip_val: float = 1.0
-    focal_length_scale: int = 5000
-    loss_3d_keypoint_weight: float = 0.05
-    loss_2d_keypoint_weight: float = 0.01
-    loss_global_orient_weight: float = 0.001
-    loss_body_pose_weight: float = 0.001
-    loss_betas_weight: float = 0.0005
-    loss_adversarial_weight: float = 0.0005
+    mlflow_run_name: str
+    learning_rate: float
+    weight_decay: float
+    grad_clip_val: float
+    focal_length_scale: int
+    loss_3d_keypoint_weight: float
+    loss_2d_keypoint_weight: float
+    loss_global_orient_weight: float
+    loss_body_pose_weight: float
+    loss_betas_weight: float
+    loss_adversarial_weight: float
 
 
 def _cli_parser():
@@ -211,7 +211,8 @@ def _cli_parser():
         help="Weight for adversarial loss",
     )
 
-    args = parser.parse_args(namespace=TrainArgument)
+    args = parser.parse_args()
+    args = TrainArgument(**vars(args))
 
     if not args.mlflow_run_name:
         curr_datetime = datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
