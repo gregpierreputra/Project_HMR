@@ -90,7 +90,6 @@ class HMRLightningModule(pl.LightningModule):
         # Instantiate SMPL model
         self.smpl = SMPL(
             model_path=smpl_model_path,
-            mean_params=smpl_mean_params_path,
             joint_regressor_extra=smpl_joint_regressor_extra_path,
         )
 

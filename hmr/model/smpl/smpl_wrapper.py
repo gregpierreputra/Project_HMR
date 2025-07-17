@@ -11,23 +11,17 @@ class SMPL(smplx.SMPLLayer):
     def __init__(
         self,
         model_path: str,
-        mean_params: str,
-        joint_regressor_extra: Optional[str] = None,
         gender: str = "neutral",
-        num_body_joints: int = 23,
+        joint_regressor_extra: Optional[str] = None,
         update_hips: bool = False,
-        *args,
-        **kwargs
     ):
         """
         Utilizing the SMPLX - an extension of the SMPL implementation that supports more joints
 
         Arguments:
             model_path          (str)  : String path to the location of the model. Example value: HMR//smpl
-            mean_parameters     (str)  : String path to the location of the npz file containing the SMPL mean parameters. Example value: HMR/smpl_mean_params.npz
             joint_regressor_extra   (Optional[str]) : String path to the location of the pickle file containing the extra joint regressors. Example value: HMR/SMPL_to_J19.pkl
             gender              (str)  : String value determining the SMPL body type to use. Hardcoded to be gender 'neutral'
-            num_body_joints     (int)  : Integer value determining the number of joints in the SMPL model. Hardcoded to be 23
             update_hips         (bool) : Boolean value determining whether the hip joints of the SMPL model will be updated
 
         Returns:
@@ -36,11 +30,6 @@ class SMPL(smplx.SMPLLayer):
         super(SMPL, self).__init__(
             model_path=model_path,
             gender=gender,
-            num_body_joints=num_body_joints,
-            mean_params=mean_params,
-            joint_regressor_extra=joint_regressor_extra,
-            *args,
-            **kwargs
         )
 
         # Joint mapping values between SMPL and OpenPose
@@ -95,7 +84,7 @@ class SMPL(smplx.SMPLLayer):
         Append an extra set of joints if joint_regressor_extra is defined
         """
         smpl_output = super(SMPL, self).forward(*args, **kwargs)
-        joints = smpl_output.joints[:, self.joint_mapper, :]
+        joints = smpl_output.joints[:, self.joint_map, :]
 
         # Branching logic for the hips data of SMPLX
         if self.update_hips:
@@ -111,6 +100,7 @@ class SMPL(smplx.SMPLLayer):
             extra_joints = vertices2joints(
                 self.joint_regressor_extra, smpl_output.vertices
             )
+
             joints = torch.cat([joints, extra_joints], dim=1)
 
         smpl_output.joints = joints
