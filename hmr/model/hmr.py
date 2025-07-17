@@ -439,10 +439,12 @@ def _test():
     vitpose_backbone_pretrained_path = str(base_dir / "vitpose_small_backbone.pth")
 
     # Can be obtained on the following link
-    # SMPL Model: https://smplify.is.tue.mpg.de/download.php 
+    # SMPL Model: https://smplify.is.tue.mpg.de/download.php
     #   (SMPLIFY_CODE_V2.ZIP or mpips_smplify_public_v2.zip)
     # SMPL parameters and regressors: https://people.eecs.berkeley.edu/~jathushan/projects/4dhumans/hmr2_data.tar.gz
-    smpl_model_path = str(base_dir / "mpips_smplify_public_v2/smplify_public/code/models")
+    smpl_model_path = str(
+        base_dir / "mpips_smplify_public_v2/smplify_public/code/models"
+    )
     smpl_mean_params_path = str(base_dir / "smpl_mean_params.npz")
     smpl_joint_regressor_extra_path = str(base_dir / "SMPL_to_J19.pkl")
 
@@ -453,3 +455,7 @@ def _test():
         vitpose_backbone_pretrained_path=vitpose_backbone_pretrained_path,
         learning_rate=1e-5,
     )
+
+
+if __name__ == "__main__":
+    _test()
