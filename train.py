@@ -7,7 +7,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import MLFlowLogger
 from pytorch_lightning import Trainer
 
-from hmr.datasets import DataModule
+from hmr.datasets import HMRDataModule
 from hmr.model.hmr import HMRLightningModule
 from hmr.utils.misc_logger import get_logger
 
@@ -115,7 +115,7 @@ def train(train_args: TrainArgument) -> Tuple[dict, dict]:
     # Setup training and validation datasets
     log.info("Instantiating data module with training and validation dataset")
 
-    data_module = DataModule(
+    data_module = HMRDataModule(
         batch_size=train_args.batch_size,
         num_workers=train_args.batch_size,
         prefetch_factor=train_args.prefetch_factor,

@@ -49,7 +49,7 @@ DEFAULT_AUG_PARAMS = {
 }
 
 
-class DataModule(pl.LightningDataModule):
+class HMRDataModule(pl.LightningDataModule):
     def __init__(
         self,
         train_dataset_name: str,
