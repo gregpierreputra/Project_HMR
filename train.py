@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Tuple
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from argparse import ArgumentParser
 
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -297,7 +297,7 @@ def train(train_args: TrainArgument) -> Tuple[dict, dict]:
     log.info("Starting the trainer.")
 
     # Log Hyperparameters
-    mlflow_logger.log_hyperparams(train_args)
+    mlflow_logger.log_hyperparams(asdict(train_args))
 
     # Call the trainer
     trainer.fit(model, datamodule=data_module)
