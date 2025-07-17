@@ -361,7 +361,7 @@ class HMRLightningModule(pl.LightningModule):
 
         # if self.cfg.get('UPDATE_GT_SPIN', False):
         #     self.update_batch_gt_spin(batch, output)
-        loss = self.compute_loss(batch, output, train=True)
+        loss = self.compute_loss(batch, output)
 
         if self.loss_smpl_weight_dict["ADVERSARIAL"] > 0:
             disc_out = self.discriminator(
