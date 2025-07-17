@@ -444,7 +444,7 @@ def _test():
     # SMPL parameters and regressors: https://people.eecs.berkeley.edu/~jathushan/projects/4dhumans/hmr2_data.tar.gz
     smpl_model_path = str(base_dir / "mpips_smplify_public_v2/smplify_public/code/models")
     smpl_mean_params_path = str(base_dir / "smpl_mean_params.npz")
-    smpl_joint_regressor_extra_path = str(base_dir, "SMPL_to_J19.pkl")
+    smpl_joint_regressor_extra_path = str(base_dir / "SMPL_to_J19.pkl")
 
     hmr_lm = HMRLightningModule(
         smpl_model_path=smpl_model_path,
