@@ -4,6 +4,7 @@ from dataclasses import dataclass, asdict
 from argparse import ArgumentParser
 from pathlib import Path
 
+import torch
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import MLFlowLogger
 from pytorch_lightning import Trainer
@@ -46,6 +47,7 @@ class TrainArgument:
     loss_body_pose_weight: float
     loss_betas_weight: float
     loss_adversarial_weight: float
+    torch_matmul_precision: str
 
 
 def _cli_parser():
@@ -219,6 +221,13 @@ def _cli_parser():
         default=0.0005,
         help="Weight for adversarial loss",
     )
+    parser.add_argument(
+        "--torch_matmul_precision",
+        type=str,
+        default="highest",
+        choices=["highest", "high", "medium"],
+        help="Sets the internal precision of float32 matrix multiplications. Only supported on new Nvidia RTX cards",
+    )
 
     args = parser.parse_args()
     args = TrainArgument(**vars(args))
@@ -236,6 +245,7 @@ def _cli_parser():
 
 
 def train(train_args: TrainArgument) -> Tuple[dict, dict]:
+    torch.set_float32_matmul_precision(train_args.torch_matmul_precision)
     log = get_logger(__name__)
 
     # Setup training and validation datasets
