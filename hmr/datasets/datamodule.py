@@ -96,12 +96,12 @@ class HMRDataModule(pl.LightningDataModule):
         if self.training_dataset is None:
             train_dataset_conf = IMAGE_DATASETS[self.train_dataset_name]
             epoch_size = train_dataset_conf["epoch_size"]
-            
-            # formula to predict dataset length, so that validation step would not be 
+
+            # formula to predict dataset length, so that validation step would not be
             # skipped in pytorch lightning Trainer
-            predicted_dataset_length = ((epoch_size // self.batch_size) - (
-                self.num_workers - 1
-            )) * self.batch_size
+            predicted_dataset_length = (
+                (epoch_size // self.batch_size) - (self.num_workers - 1)
+            ) * self.batch_size
 
             self.training_dataset: WebDataset = load_tars_as_webdataset(
                 urls=train_dataset_conf["urls"],
