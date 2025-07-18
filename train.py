@@ -35,6 +35,7 @@ class TrainArgument:
     mlflow_experiment_name: str
     mlflow_uri: str
     mlflow_run_name: str
+    mlflow_log_model: str | bool
     learning_rate: float
     weight_decay: float
     grad_clip_val: float
@@ -167,6 +168,13 @@ def _cli_parser():
         help="Optional name of the MLflow run",
     )
     parser.add_argument(
+        "--mlflow_log_model",
+        type=str,
+        default="all",
+        help="Option to log checkpoints created by ModelCheckpoint as MLFlow artifacts",
+        choices=["all", "True", "False"],
+    )
+    parser.add_argument(
         "--learning_rate", type=float, default=1e-5, help="Learning rate for optimizer"
     )
     parser.add_argument(
@@ -219,6 +227,11 @@ def _cli_parser():
         curr_datetime = datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
         args.mlflow_run_name = f"{args.mlflow_experiment_name}-{curr_datetime}"
 
+    if args.mlflow_log_model == "True":
+        args.mlflow_log_model = True
+    elif args.mlflow_log_model == "False":
+        args.mlflow_log_model = False
+
     return args
 
 
@@ -266,6 +279,7 @@ def train(train_args: TrainArgument) -> Tuple[dict, dict]:
         experiment_name=train_args.mlflow_experiment_name,
         tracking_uri=train_args.mlflow_uri,
         run_name=train_args.mlflow_run_name,
+        log_model=train_args.mlflow_log_model,
     )
 
     # Setup callbacks
