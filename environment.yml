@@ -10,7 +10,7 @@ dependencies:
   - torchvision
   - pip
   - pip:
-    - pytorch-lightning
+    - pytorch-lightning==2.5.0
     - smplx==0.1.28
     - pyrender
     - opencv-python

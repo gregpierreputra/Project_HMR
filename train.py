@@ -290,7 +290,6 @@ def train(train_args: TrainArgument) -> Tuple[dict, dict]:
         tracking_uri=train_args.mlflow_uri,
         run_name=train_args.mlflow_run_name,
         log_model=train_args.mlflow_log_model,
-        checkpoint_path_prefix="ckpt",
     )
 
     # Setup callbacks
