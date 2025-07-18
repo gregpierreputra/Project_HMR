@@ -299,6 +299,8 @@ def train(train_args: TrainArgument) -> Tuple[dict, dict]:
     checkpoint_path = Path(train_args.checkpoint_path) / train_args.mlflow_run_name
     checkpoint_path.mkdir(parents=True)
 
+    ModelCheckpoint.CHECKPOINT_EQUALS_CHAR = "_"
+    ModelCheckpoint.CHECKPOINT_JOIN_CHAR = "-"
     checkpoint_callback = ModelCheckpoint(
         filename="{epoch:04d}-{step:09d}",
         dirpath=checkpoint_path,
