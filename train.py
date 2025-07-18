@@ -172,7 +172,7 @@ def _cli_parser():
     parser.add_argument(
         "--mlflow_log_model",
         type=str,
-        default="all",
+        default="True",
         help="Option to log checkpoints created by ModelCheckpoint as MLFlow artifacts",
         choices=["all", "True", "False"],
     )
