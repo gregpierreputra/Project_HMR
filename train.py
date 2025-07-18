@@ -303,7 +303,7 @@ def train(train_args: TrainArgument) -> Tuple[dict, dict]:
     ModelCheckpoint.CHECKPOINT_EQUALS_CHAR = "_"
     ModelCheckpoint.CHECKPOINT_JOIN_CHAR = "-"
     checkpoint_callback = ModelCheckpoint(
-        filename="{epoch:04d}-{step:09d}.ckpt",
+        filename="{epoch:04d}-{step:09d}",
         dirpath=str(checkpoint_path),
         save_last=True,
         save_top_k=train_args.checkpoint_topk,
