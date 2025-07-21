@@ -21,6 +21,7 @@ dependencies:
     - dill
     - webdataset
     - git+https://github.com/mattloper/chumpy
+    - git+https://github.com/facebookresearch/detectron2.git
     - mlflow
     - black
     - ruff
