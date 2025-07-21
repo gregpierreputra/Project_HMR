@@ -10,26 +10,22 @@ from .utils import (convert_cvimg_to_tensor,
                     expand_to_aspect_ratio,
                     generate_image_patch_cv2)
 
-DEFAULT_MEAN = 255. * np.array([0.485, 0.456, 0.406])
-DEFAULT_STD = 255. * np.array([0.229, 0.224, 0.225])
 
 class ViTDetDataset(torch.utils.data.Dataset):
 
     def __init__(self,
-                 cfg: CfgNode,
+                 img_size: int,
+                 mean: list[float],
+                 std: list[float],
                  img_cv2: np.array,
-                 boxes: np.array,
-                 train: bool = False,
-                 **kwargs):
+                 boxes: np.array):
         super().__init__()
-        self.cfg = cfg
         self.img_cv2 = img_cv2
 
-        assert train == False, "ViTDetDataset is only for inference"
-        self.train = train
-        self.img_size = cfg.MODEL.IMAGE_SIZE
-        self.mean = 255. * np.array(self.cfg.MODEL.IMAGE_MEAN)
-        self.std = 255. * np.array(self.cfg.MODEL.IMAGE_STD)
+        self.img_size = img_size
+        self.mean = mean
+        self.std = std
+        self.bbox_shape = [192, 256]
 
         # Preprocess annotations
         boxes = boxes.astype(np.float32)
@@ -47,8 +43,7 @@ class ViTDetDataset(torch.utils.data.Dataset):
         center_y = center[1]
 
         scale = self.scale[idx]
-        BBOX_SHAPE = self.cfg.MODEL.get('BBOX_SHAPE', None)
-        bbox_size = expand_to_aspect_ratio(scale*200, target_aspect_ratio=BBOX_SHAPE).max()
+        bbox_size = expand_to_aspect_ratio(scale*200, target_aspect_ratio=self.bbox_shape).max()
 
         patch_width = patch_height = self.img_size
 

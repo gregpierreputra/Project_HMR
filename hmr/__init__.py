@@ -13,27 +13,12 @@ def check_smpl_exists(smpl_file_location: str):
 
     return True
 
-def load_HMR(model_config_path: str,
-             checkpoint_path: str,
+def load_HMR(checkpoint_path: str,
              smpl_file_location: str,
              smpl_model_path: str,
              smpl_mean_params_path: str,
              smpl_joint_regressor_extra_path: str,
              vitpose_backbone_pretrained_path: str):
-    
-    model_cfg = get_config(
-        model_config_path,
-        smpl_model_path,
-        smpl_joint_regressor_extra_path,
-        smpl_mean_params_path)
-
-    # Override some config values, to crop bbox correctly
-    if (model_cfg.MODEL.BACKBONE.TYPE == 'vit') and ('BBOX_SHAPE' not in model_cfg.MODEL):
-        model_cfg.defrost()
-        
-        assert model_cfg.MODEL.IMAGE_SIZE == 256, f"MODEL.IMAGE_SIZE ({model_cfg.MODEL.IMAGE_SIZE}) should be 256 for ViT backbone"
-        model_cfg.MODEL.BBOX_SHAPE = [192,256]
-        model_cfg.freeze()
 
     # Check to ensure that an SMPL model exists
     check_smpl_exists(smpl_file_location)
@@ -42,11 +27,10 @@ def load_HMR(model_config_path: str,
     model = HMRLightningModule.load_from_checkpoint(
         checkpoint_path=checkpoint_path,
         strict=False, 
-        cfg=model_cfg,
         smpl_model_path=smpl_model_path,
         smpl_joint_regressor_extra_path=smpl_joint_regressor_extra_path,
         smpl_mean_params_path=smpl_mean_params_path,
         vitpose_backbone_pretrained_path=vitpose_backbone_pretrained_path
         )
-    
-    return model, model_cfg
+
+    return model

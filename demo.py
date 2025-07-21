@@ -5,6 +5,7 @@ Runner code for running the demonstration code for the most recently trained mod
 Note that this demonstration code requires the following:
 - To be defined
 """
+import time
 from pathlib import Path
 import torch
 import argparse
@@ -13,27 +14,24 @@ import cv2
 import numpy as np
 
 from hmr import load_HMR
-from hmr.datasets.vitdet_dataset import ViTDetDataset, DEFAULT_MEAN, DEFAULT_STD
+from hmr.datasets.vitdet_dataset import ViTDetDataset
 from hmr.utils import recursive_to
 from hmr.utils.renderer import Renderer, cam_crop_to_full
 from hmr.utils.utils_detectron2 import DefaultPredictor_Lazy
+from hmr.datasets.webdataset import DEFAULT_IMG_SIZE, DEFAULT_MEAN, DEFAULT_STD
+from hmr.model.hmr import HMRLightningModule
+
 
 LIGHT_BLUE=(0.65098039,  0.74117647,  0.85882353)
 
+
 def main():
     # Start time
-    import time
-    start = time.time()
+    start = time.perf_counter()
     
     # Argument parser
     parser = argparse.ArgumentParser(description="HMR Demo Code")
     
-    parser.add_argument(
-        "--model_config_path",
-        type=str,
-        default="/opt/ml/misc/MDN/HMR2/model_config.yaml",
-        help="Path to the .yaml file for the model config"
-    )
     parser.add_argument(
         "--smpl_model_path",
         type=str,
@@ -63,13 +61,6 @@ def main():
         type=str,
         default="/opt/ml/misc/MDN/HMR2/checkpoint_file.ckpt",
         help='Path to pretrained model checkpoint'
-    )
-    parser.add_argument(
-        "--smpl_pkl_file",
-        dest='smpl_pkl_file',
-        type=str,
-        default="/opt/ml/misc/MDN/HMR2/basicModel_neutral_lbs_10_207_0_v1.0.0.pkl",
-        help='Exact path to the SMPL .pkl file'
     )
     parser.add_argument(
         "--img_folder",
@@ -133,16 +124,14 @@ def main():
 
     args = parser.parse_args()
 
-    # Load the model using the checkpoint, and checks if dependencies are configured
-    model, model_cfg = load_HMR(
-        model_config_path=args.model_config_path,
+    # Load the model using the checkpoint
+    model = HMRLightningModule.load_from_checkpoint(
         checkpoint_path=args.checkpoint,
-        smpl_file_location=args.smpl_pkl_file,
         smpl_model_path=args.smpl_model_path,
-        smpl_mean_params_path=args.smpl_mean_params_path,
         smpl_joint_regressor_extra_path=args.smpl_joint_regressor_extra_path,
+        smpl_mean_params_path=args.smpl_mean_params_path,
         vitpose_backbone_pretrained_path=args.vitpose_backbone_pretrained_path
-    )
+        )
 
     # Setup the HMR model
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -177,7 +166,10 @@ def main():
         detector       = DefaultPredictor_Lazy(detectron2_cfg)
     
     # Setup the renderer
-    renderer = Renderer(model_cfg,
+    renderer = Renderer(focal_length_scale=model.focal_length_scale,
+                        image_size=model._image_size,
+                        mean=DEFAULT_MEAN,
+                        std=DEFAULT_STD,
                         faces=model.smpl.faces)
     
     # Make the output directory if it does not exist
@@ -192,29 +184,35 @@ def main():
         img_cv2 = cv2.imread(str(img_path))
 
         # Detect humans in the image
+        time_det_start = time.perf_counter()
         det_out = detector(img_cv2)
+        time_det = time.perf_counter() - time_det_start
+        print(f"DET FORWARD TIME {time_det}")
 
         det_instances = det_out['instances']
         valid_idx = (det_instances.pred_classes==0) & (det_instances.scores > 0.5)
         boxes=det_instances.pred_boxes.tensor[valid_idx].cpu().numpy()
 
         # Run HMR2.0 on all detected humans
-        dataset = ViTDetDataset(model_cfg, img_cv2, boxes)
+        dataset = ViTDetDataset(img_size=model._image_size, mean=DEFAULT_MEAN, std=DEFAULT_STD, img_cv2=img_cv2, boxes=boxes)
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=8, shuffle=False, num_workers=0)
 
         all_verts = []
         all_cam_t = []
-        
+
         for batch in dataloader:
             batch = recursive_to(batch, device)
-            with torch.no_grad():
+            with torch.inference_mode():
+                time_model_start = time.perf_counter()
                 out = model(batch)
+                time_forward = time.perf_counter() - time_model_start
+                print(f"HMR FORWARD TIME: {time_forward}")
 
             pred_cam = out['pred_cam']
             box_center = batch["box_center"].float()
             box_size = batch["box_size"].float()
             img_size = batch["img_size"].float()
-            scaled_focal_length = model_cfg.EXTRA.FOCAL_LENGTH / model_cfg.MODEL.IMAGE_SIZE * img_size.max()
+            scaled_focal_length = model.focal_length_scale / model._image_size * img_size.max()
             pred_cam_t_full = cam_crop_to_full(pred_cam, box_center, box_size, img_size, scaled_focal_length).detach().cpu().numpy()
 
             # Render the result
@@ -227,12 +225,15 @@ def main():
                 input_patch = batch['img'][n].cpu() * (DEFAULT_STD[:,None,None]/255) + (DEFAULT_MEAN[:,None,None]/255)
                 input_patch = input_patch.permute(1,2,0).numpy()
 
+                time_start_render = time.perf_counter()
                 regression_img = renderer(out['pred_vertices'][n].detach().cpu().numpy(),
                                         out['pred_cam_t'][n].detach().cpu().numpy(),
                                         batch['img'][n],
                                         mesh_base_color=LIGHT_BLUE,
                                         scene_bg_color=(1, 1, 1),
                                         )
+                time_render = time.perf_counter() - time_start_render
+                print(f"RENDER TIME: {time_render}")
 
                 final_img = np.concatenate([input_patch, regression_img], axis=1)
 
@@ -284,7 +285,7 @@ def main():
 
             cv2.imwrite(os.path.join(args.out_folder, f'{img_fn}_all.png'), 255*input_img_overlay[:, :, ::-1])
         
-        end = time.time()
+        end = time.perf_counter()
         print(end - start)
 
 if __name__ == '__main__':

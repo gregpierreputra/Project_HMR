@@ -4,6 +4,7 @@ from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.config import CfgNode, instantiate
 from detectron2.data import MetadataCatalog
 from omegaconf import OmegaConf
+from detectron2.modeling import build_model
 
 
 class DefaultPredictor_Lazy:

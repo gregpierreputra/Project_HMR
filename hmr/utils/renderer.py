@@ -144,18 +144,19 @@ def create_raymond_lights() -> List[pyrender.Node]:
 
 class Renderer:
 
-    def __init__(self, cfg: CfgNode, faces: np.array):
+    def __init__(self, focal_length_scale: int, image_size: int, mean: list[float], std: list[float], faces: np.array):
         """
         Wrapper around the pyrender renderer to render SMPL meshes.
         Args:
             cfg (CfgNode): Model config file.
             faces (np.array): Array of shape (F, 3) containing the mesh faces.
         """
-        self.cfg = cfg
-        self.focal_length = cfg.EXTRA.FOCAL_LENGTH
-        self.img_res = cfg.MODEL.IMAGE_SIZE
+        self.focal_length_scale = focal_length_scale
+        self.image_size = image_size
+        self.mean = mean
+        self.std = std
 
-        self.camera_center = [self.img_res // 2, self.img_res // 2]
+        self.camera_center = [self.image_size // 2, self.image_size // 2]
         self.faces = faces
 
     def __call__(
@@ -186,10 +187,10 @@ class Renderer:
             image = cv2.imread(imgname).astype(np.float32)[:, :, ::-1] / 255.0
         else:
             image = image.clone() * torch.tensor(
-                self.cfg.MODEL.IMAGE_STD, device=image.device
+                self.std, device=image.device
             ).reshape(3, 1, 1)
             image = image + torch.tensor(
-                self.cfg.MODEL.IMAGE_MEAN, device=image.device
+                self.mean, device=image.device
             ).reshape(3, 1, 1)
             image = image.permute(1, 2, 0).cpu().numpy()
 
@@ -230,8 +231,8 @@ class Renderer:
         camera_pose[:3, 3] = camera_translation
         camera_center = [image.shape[1] / 2.0, image.shape[0] / 2.0]
         camera = pyrender.IntrinsicsCamera(
-            fx=self.focal_length,
-            fy=self.focal_length,
+            fx=self.focal_length_scale,
+            fy=self.focal_length_scale,
             cx=camera_center[0],
             cy=camera_center[1],
             zfar=1e12,
@@ -313,7 +314,7 @@ class Renderer:
             # camera_translation[0] *= -1.
         else:
             camera_translation = np.array(
-                [0, 0, camera_z * self.focal_length / render_res[1]]
+                [0, 0, camera_z * self.focal_length_scale / render_res[1]]
             )
 
         mesh = self.vertices_to_trimesh(
@@ -331,8 +332,8 @@ class Renderer:
         # camera_pose[:3, 3] = camera_translation
         camera_center = [render_res[0] / 2.0, render_res[1] / 2.0]
         camera = pyrender.IntrinsicsCamera(
-            fx=self.focal_length,
-            fy=self.focal_length,
+            fx=self.focal_length_scale,
+            fy=self.focal_length_scale,
             cx=camera_center[0],
             cy=camera_center[1],
             zfar=1e12,
@@ -392,7 +393,7 @@ class Renderer:
         camera_pose = np.eye(4)
         # camera_pose[:3, 3] = camera_translation
         camera_center = [render_res[0] / 2.0, render_res[1] / 2.0]
-        focal_length = focal_length if focal_length is not None else self.focal_length
+        focal_length = focal_length if focal_length is not None else self.focal_length_scale
         camera = pyrender.IntrinsicsCamera(
             fx=focal_length,
             fy=focal_length,
