@@ -3,7 +3,7 @@ Demo.py
 Runner code for running the demonstration code for the most recently trained model
 
 Note that this demonstration code requires the following:
-
+- To be defined
 """
 from pathlib import Path
 import torch
@@ -12,19 +12,13 @@ import os
 import cv2
 import numpy as np
 
-from .hmr import load_HMR
-from hmr.datasets.vitdet_dataset import ViTDetDataset
+from hmr import load_HMR
+from hmr.datasets.vitdet_dataset import ViTDetDataset, DEFAULT_MEAN, DEFAULT_STD
 from hmr.utils import recursive_to
 from hmr.utils.renderer import Renderer, cam_crop_to_full
 from hmr.utils.utils_detectron2 import DefaultPredictor_Lazy
 
-DEFAULT_CHECKPOINT = ''
-DEFAULT_IMG_FOLDER = ''
-DEFAULT_OUT_FOLDER = ''
-DEFAULT_SMPL_PKL_FILE = ''
-
 LIGHT_BLUE=(0.65098039,  0.74117647,  0.85882353)
-
 
 def main():
     # Start time
@@ -34,6 +28,12 @@ def main():
     # Argument parser
     parser = argparse.ArgumentParser(description="HMR Demo Code")
     
+    parser.add_argument(
+        "--model_config_path",
+        type=str,
+        default="/opt/ml/misc/MDN/HMR2/model_config.yaml",
+        help="Path to the .yaml file for the model config"
+    )
     parser.add_argument(
         "--smpl_model_path",
         type=str,
@@ -59,29 +59,28 @@ def main():
         help="Path to pretrained ViTPose backbone",
     )
     parser.add_argument(
-        '--checkpoint',
+        "--checkpoint",
         type=str,
-        default=DEFAULT_CHECKPOINT,
+        default="/opt/ml/misc/MDN/HMR2/checkpoint_file.ckpt",
         help='Path to pretrained model checkpoint'
     )
     parser.add_argument(
-        '--smpl_pkl_file',
+        "--smpl_pkl_file",
         dest='smpl_pkl_file',
-        action='store_true',
         type=str,
-        default=DEFAULT_SMPL_PKL_FILE,
+        default="/opt/ml/misc/MDN/HMR2/basicModel_neutral_lbs_10_207_0_v1.0.0.pkl",
         help='Exact path to the SMPL .pkl file'
     )
     parser.add_argument(
-        '--img_folder',
+        "--img_folder",
         type=str,
-        default=DEFAULT_IMG_FOLDER,
+        default="/opt/ml/misc/MDN/HMR2/input_images",
         help='Folder with input images'
     )
     parser.add_argument(
         '--out_folder',
         type=str,
-        default=DEFAULT_OUT_FOLDER,
+        default="/opt/ml/misc/MDN/HMR2/output_images",
         help='Output folder to save rendered results'
     )
     parser.add_argument(
@@ -136,12 +135,14 @@ def main():
 
     # Load the model using the checkpoint, and checks if dependencies are configured
     model, model_cfg = load_HMR(
-        args.checkpoint,
-        args.smpl_pkl_file,
-        args.smpl_model_path,
-        args.smpl_joint_regressor_extra_path,
-        args.smpl_mean_params_path
-)
+        model_config_path=args.model_config_path,
+        checkpoint_path=args.checkpoint,
+        smpl_file_location=args.smpl_pkl_file,
+        smpl_model_path=args.smpl_model_path,
+        smpl_mean_params_path=args.smpl_mean_params_path,
+        smpl_joint_regressor_extra_path=args.smpl_joint_regressor_extra_path,
+        vitpose_backbone_pretrained_path=args.vitpose_backbone_pretrained_path
+    )
 
     # Setup the HMR model
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -149,12 +150,13 @@ def main():
     model.eval()
 
     # Load detector
+    # Vitdet from Detectron2
     if args.detector == 'vitdet':
 
         from detectron2.config import LazyConfig
         import hmr
         
-        cfg_path = Path(hmr.__file__).parent/'configs'/'cascade_mask_rcnn_vitdet_h_75ep.py'
+        cfg_path = Path(hmr.__file__).parent/'config'/'cascade_mask_rcnn_vitdet_h_75ep.py'
         
         detectron2_cfg = LazyConfig.load(str(cfg_path))
         detectron2_cfg.train.init_checkpoint = "https://dl.fbaipublicfiles.com/detectron2/ViTDet/COCO/cascade_mask_rcnn_vitdet_h/f328730692/model_final_f05665.pkl"
@@ -164,9 +166,11 @@ def main():
         
         detector = DefaultPredictor_Lazy(detectron2_cfg)
     
+    # Regnety from Detectron2
     elif args.detector == 'regnety':
         from detectron2 import model_zoo
         from detectron2.config import get_cfg
+        
         detectron2_cfg = model_zoo.get_config('new_baselines/mask_rcnn_regnety_4gf_dds_FPN_400ep_LSJ.py', trained=True)
         detectron2_cfg.model.roi_heads.box_predictor.test_score_thresh = 0.5
         detectron2_cfg.model.roi_heads.box_predictor.test_nms_thresh   = 0.4
@@ -174,7 +178,7 @@ def main():
     
     # Setup the renderer
     renderer = Renderer(model_cfg,
-                        model.smpl.faces)
+                        faces=model.smpl.faces)
     
     # Make the output directory if it does not exist
     os.makedirs(args.out_folder,
