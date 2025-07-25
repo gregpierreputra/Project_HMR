@@ -6,19 +6,23 @@ from skimage.filters import gaussian
 from yacs.config import CfgNode
 import torch
 
-from .utils import (convert_cvimg_to_tensor,
-                    expand_to_aspect_ratio,
-                    generate_image_patch_cv2)
+from .utils import (
+    convert_cvimg_to_tensor,
+    expand_to_aspect_ratio,
+    generate_image_patch_cv2,
+)
 
 
 class ViTDetDataset(torch.utils.data.Dataset):
 
-    def __init__(self,
-                 img_size: int,
-                 mean: list[float],
-                 std: list[float],
-                 img_cv2: np.array,
-                 boxes: np.array):
+    def __init__(
+        self,
+        img_size: int,
+        mean: list[float],
+        std: list[float],
+        img_cv2: np.array,
+        boxes: np.array,
+    ):
         super().__init__()
         self.img_cv2 = img_cv2
 
@@ -43,7 +47,9 @@ class ViTDetDataset(torch.utils.data.Dataset):
         center_y = center[1]
 
         scale = self.scale[idx]
-        bbox_size = expand_to_aspect_ratio(scale*200, target_aspect_ratio=self.bbox_shape).max()
+        bbox_size = expand_to_aspect_ratio(
+            scale * 200, target_aspect_ratio=self.bbox_shape
+        ).max()
 
         patch_width = patch_height = self.img_size
 
@@ -52,31 +58,44 @@ class ViTDetDataset(torch.utils.data.Dataset):
         cvimg = self.img_cv2.copy()
         if True:
             # Blur image to avoid aliasing artifacts
-            downsampling_factor = ((bbox_size*1.0) / patch_width)
-            print(f'{downsampling_factor=}')
+            downsampling_factor = (bbox_size * 1.0) / patch_width
+            print(f"{downsampling_factor=}")
             downsampling_factor = downsampling_factor / 2.0
             if downsampling_factor > 1.1:
-                cvimg  = gaussian(cvimg, sigma=(downsampling_factor-1)/2, channel_axis=2, preserve_range=True)
+                cvimg = gaussian(
+                    cvimg,
+                    sigma=(downsampling_factor - 1) / 2,
+                    channel_axis=2,
+                    preserve_range=True,
+                )
 
-
-        img_patch_cv, trans = generate_image_patch_cv2(cvimg,
-                                                    center_x, center_y,
-                                                    bbox_size, bbox_size,
-                                                    patch_width, patch_height,
-                                                    False, 1.0, 0,
-                                                    border_mode=cv2.BORDER_CONSTANT)
+        img_patch_cv, trans = generate_image_patch_cv2(
+            cvimg,
+            center_x,
+            center_y,
+            bbox_size,
+            bbox_size,
+            patch_width,
+            patch_height,
+            False,
+            1.0,
+            0,
+            border_mode=cv2.BORDER_CONSTANT,
+        )
         img_patch_cv = img_patch_cv[:, :, ::-1]
         img_patch = convert_cvimg_to_tensor(img_patch_cv)
 
         # apply normalization
         for n_c in range(min(self.img_cv2.shape[2], 3)):
-            img_patch[n_c, :, :] = (img_patch[n_c, :, :] - self.mean[n_c]) / self.std[n_c]
+            img_patch[n_c, :, :] = (img_patch[n_c, :, :] - self.mean[n_c]) / self.std[
+                n_c
+            ]
 
         item = {
-            'img': img_patch,
-            'personid': int(self.personid[idx]),
+            "img": img_patch,
+            "personid": int(self.personid[idx]),
         }
-        item['box_center'] = self.center[idx].copy()
-        item['box_size'] = bbox_size
-        item['img_size'] = 1.0 * np.array([cvimg.shape[1], cvimg.shape[0]])
+        item["box_center"] = self.center[idx].copy()
+        item["box_size"] = bbox_size
+        item["img_size"] = 1.0 * np.array([cvimg.shape[1], cvimg.shape[0]])
         return item

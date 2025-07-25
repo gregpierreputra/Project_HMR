@@ -1,6 +1,7 @@
 """
 Directly taken from the 4D Human Implementation
 """
+
 ## coco_loader_lsj.py
 
 import detectron2.data.transforms as T
@@ -61,7 +62,9 @@ lr_multiplier = L(WarmupParamScheduler)(
 
 # Optimizer
 optimizer = model_zoo.get_config("common/optim.py").AdamW
-optimizer.params.lr_factor_func = partial(get_vit_lr_decay_rate, num_layers=12, lr_decay_rate=0.7)
+optimizer.params.lr_factor_func = partial(
+    get_vit_lr_decay_rate, num_layers=12, lr_decay_rate=0.7
+)
 optimizer.params.overrides = {"pos_embed": {"weight_decay": 0.0}}
 
 # cascade_mask_rcnn_vitdet_b_100ep.py
@@ -110,7 +113,9 @@ model.roi_heads.update(
 
 from functools import partial
 
-train.init_checkpoint = "detectron2://ImageNetPretrained/MAE/mae_pretrain_vit_huge_p14to16.pth"
+train.init_checkpoint = (
+    "detectron2://ImageNetPretrained/MAE/mae_pretrain_vit_huge_p14to16.pth"
+)
 
 model.backbone.net.embed_dim = 1280
 model.backbone.net.depth = 32
@@ -121,7 +126,9 @@ model.backbone.net.window_block_indexes = (
     list(range(0, 7)) + list(range(8, 15)) + list(range(16, 23)) + list(range(24, 31))
 )
 
-optimizer.params.lr_factor_func = partial(get_vit_lr_decay_rate, lr_decay_rate=0.9, num_layers=32)
+optimizer.params.lr_factor_func = partial(
+    get_vit_lr_decay_rate, lr_decay_rate=0.9, num_layers=32
+)
 optimizer.params.overrides = {}
 optimizer.params.weight_decay_norm = None
 

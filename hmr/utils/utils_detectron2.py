@@ -75,7 +75,7 @@ class DefaultPredictor_Lazy:
 
         # The evaluation function for the DefaultPredictor is locked behind CUDA availability (??)
         # Change implementation depending on CUDA availability
-        if (torch.cuda.is_available()):
+        if torch.cuda.is_available():
             self.model.eval().cuda()
         else:
             self.model.eval()

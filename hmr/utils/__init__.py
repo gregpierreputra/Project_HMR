@@ -1,6 +1,7 @@
 import torch
 from typing import Any
 
+
 def recursive_to(x: Any, target: torch.device):
     """
     Recursively transfer a batch of data to the target device

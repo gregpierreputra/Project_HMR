@@ -144,7 +144,14 @@ def create_raymond_lights() -> List[pyrender.Node]:
 
 class Renderer:
 
-    def __init__(self, focal_length_scale: int, image_size: int, mean: list[float], std: list[float], faces: np.array):
+    def __init__(
+        self,
+        focal_length_scale: int,
+        image_size: int,
+        mean: list[float],
+        std: list[float],
+        faces: np.array,
+    ):
         """
         Wrapper around the pyrender renderer to render SMPL meshes.
         Args:
@@ -186,12 +193,12 @@ class Renderer:
         if full_frame:
             image = cv2.imread(imgname).astype(np.float32)[:, :, ::-1] / 255.0
         else:
-            image = image.clone() * torch.tensor(
-                self.std, device=image.device
-            ).reshape(3, 1, 1)
-            image = image + torch.tensor(
-                self.mean, device=image.device
-            ).reshape(3, 1, 1)
+            image = image.clone() * torch.tensor(self.std, device=image.device).reshape(
+                3, 1, 1
+            )
+            image = image + torch.tensor(self.mean, device=image.device).reshape(
+                3, 1, 1
+            )
             image = image.permute(1, 2, 0).cpu().numpy()
 
         renderer = pyrender.OffscreenRenderer(
@@ -393,7 +400,9 @@ class Renderer:
         camera_pose = np.eye(4)
         # camera_pose[:3, 3] = camera_translation
         camera_center = [render_res[0] / 2.0, render_res[1] / 2.0]
-        focal_length = focal_length if focal_length is not None else self.focal_length_scale
+        focal_length = (
+            focal_length if focal_length is not None else self.focal_length_scale
+        )
         camera = pyrender.IntrinsicsCamera(
             fx=focal_length,
             fy=focal_length,
