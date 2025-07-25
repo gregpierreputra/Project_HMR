@@ -1,10 +1,3 @@
-"""
-Demo.py
-Runner code for running the demonstration code for the most recently trained model
-
-Note that this demonstration code requires the following:
-- To be defined
-"""
 import time
 from pathlib import Path
 import torch
