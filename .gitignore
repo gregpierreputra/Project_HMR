@@ -1,7 +1,16 @@
+# Specific
 .ipynb_checkpoints/
 *.pth
 __pycache__/
-# Specific
+.vscode/
 
 # Byte-compiled data files from DataModule
 *.py[cod]
+*$py.class
+
+# Training artifacts
+checkpoints/
+mlruns/
+
+# Demo images
+demo/

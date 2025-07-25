@@ -3,10 +3,11 @@ Render OpenPose keypoints.
 Code was ported to Python from the official C++ implementation https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/src/openpose/utilities/keypoint.cpp
 """
 
-import cv2
 import math
-import numpy as np
 from typing import List, Tuple
+
+import cv2
+import numpy as np
 
 
 def get_keypoints_rectangle(

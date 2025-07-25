@@ -3,6 +3,7 @@ import torch
 from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.config import CfgNode, instantiate
 from detectron2.data import MetadataCatalog
+from detectron2.modeling import build_model
 from omegaconf import OmegaConf
 
 
@@ -72,7 +73,13 @@ class DefaultPredictor_Lazy:
             self.aug = mapper.augmentations
             self.input_format = mapper.image_format
 
-        self.model.eval().cuda()
+        # The evaluation function for the DefaultPredictor is locked behind CUDA availability (??)
+        # Change implementation depending on CUDA availability
+        if torch.cuda.is_available():
+            self.model.eval().cuda()
+        else:
+            self.model.eval()
+
         if test_dataset:
             self.metadata = MetadataCatalog.get(test_dataset)
         assert self.input_format in ["RGB", "BGR"], self.input_format

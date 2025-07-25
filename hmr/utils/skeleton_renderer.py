@@ -1,7 +1,8 @@
-import torch
-import numpy as np
-import trimesh
 from typing import Optional
+
+import numpy as np
+import torch
+import trimesh
 from yacs.config import CfgNode
 
 from .geometry import perspective_projection

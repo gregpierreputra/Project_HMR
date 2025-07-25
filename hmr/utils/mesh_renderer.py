@@ -2,13 +2,13 @@ import os
 
 if "PYOPENGL_PLATFORM" not in os.environ:
     os.environ["PYOPENGL_PLATFORM"] = "egl"
-import torch
-from torchvision.utils import make_grid
+import cv2
 import numpy as np
 import pyrender
-import trimesh
-import cv2
+import torch
 import torch.nn.functional as F
+import trimesh
+from torchvision.utils import make_grid
 
 from .render_openpose import render_openpose
 
