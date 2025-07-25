@@ -1,19 +1,19 @@
-import time
-from pathlib import Path
-import torch
 import argparse
 import os
+import time
+from pathlib import Path
+
 import cv2
 import numpy as np
+import torch
 
 from hmr import load_HMR
 from hmr.datasets.vitdet_dataset import ViTDetDataset
+from hmr.datasets.webdataset import DEFAULT_IMG_SIZE, DEFAULT_MEAN, DEFAULT_STD
+from hmr.model.hmr import HMRLightningModule
 from hmr.utils import recursive_to
 from hmr.utils.renderer import Renderer, cam_crop_to_full
 from hmr.utils.utils_detectron2 import DefaultPredictor_Lazy
-from hmr.datasets.webdataset import DEFAULT_IMG_SIZE, DEFAULT_MEAN, DEFAULT_STD
-from hmr.model.hmr import HMRLightningModule
-
 
 LIGHT_BLUE = (0.65098039, 0.74117647, 0.85882353)
 
@@ -133,6 +133,7 @@ def main():
     if args.detector == "vitdet":
 
         from detectron2.config import LazyConfig
+
         import hmr
 
         cfg_path = (

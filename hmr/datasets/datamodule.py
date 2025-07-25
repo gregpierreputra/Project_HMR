@@ -2,9 +2,9 @@ from pathlib import Path
 from typing import List, Optional
 
 import pytorch_lightning as pl
-from webdataset.compat import WebDataset
-from torch.utils.data import DataLoader
 from pytorch_lightning.utilities import CombinedLoader
+from torch.utils.data import DataLoader
+from webdataset.compat import WebDataset
 
 from hmr.datasets.motion_capture_dataset import MotionCaptureDataset
 from hmr.datasets.webdataset import load_tars_as_webdataset

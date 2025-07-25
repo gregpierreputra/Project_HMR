@@ -1,13 +1,13 @@
-from datetime import datetime
-from typing import Tuple
-from dataclasses import dataclass, asdict
 from argparse import ArgumentParser
+from dataclasses import asdict, dataclass
+from datetime import datetime
 from pathlib import Path
+from typing import Tuple
 
 import torch
+from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import MLFlowLogger
-from pytorch_lightning import Trainer
 
 from hmr.datasets import HMRDataModule
 from hmr.model.hmr import HMRLightningModule

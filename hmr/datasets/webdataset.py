@@ -1,15 +1,14 @@
-from typing import List
 from pathlib import Path
+from typing import List
 
+import braceexpand
 import cv2
 import numpy as np
 import torch
-import braceexpand
 from webdataset.compat import WebDataset
 
-from hmr.datasets.utils import get_example, expand_to_aspect_ratio
-from hmr.datasets.smplh_prob_filter import poses_check_probable, load_amass_hist_smooth
-
+from hmr.datasets.smplh_prob_filter import load_amass_hist_smooth, poses_check_probable
+from hmr.datasets.utils import expand_to_aspect_ratio, get_example
 
 _AIC_TRAIN_CORRUPT_KEYS = {
     "0a047f0124ae48f8eee15a9506ce1449ee1ba669",

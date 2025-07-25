@@ -2,13 +2,14 @@ import os
 
 if "PYOPENGL_PLATFORM" not in os.environ:
     os.environ["PYOPENGL_PLATFORM"] = "egl"
-import torch
+from typing import List, Optional
+
+import cv2
 import numpy as np
 import pyrender
+import torch
 import trimesh
-import cv2
 from yacs.config import CfgNode
-from typing import List, Optional
 
 
 def cam_crop_to_full(cam_bbox, box_center, box_size, img_size, focal_length=5000.0):

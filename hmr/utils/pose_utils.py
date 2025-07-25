@@ -2,9 +2,10 @@
 Code adapted from: https://github.com/akanazawa/hmr/blob/master/src/benchmark/eval_util.py
 """
 
-import torch
+from typing import Dict, List, Optional, Tuple
+
 import numpy as np
-from typing import Optional, Dict, List, Tuple
+import torch
 
 
 def compute_similarity_transform(S1: torch.Tensor, S2: torch.Tensor) -> torch.Tensor:

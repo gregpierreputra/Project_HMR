@@ -5,10 +5,7 @@ import torch
 from einops import rearrange
 from torch import nn
 
-from .t_cond_mlp import (
-    AdaptiveLayerNorm1D,
-    normalization_layer,
-)
+from .t_cond_mlp import AdaptiveLayerNorm1D, normalization_layer
 
 
 def exists(val):

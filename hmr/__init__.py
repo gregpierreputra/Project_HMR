@@ -1,8 +1,8 @@
 import os
 from pathlib import Path
 
-from hmr.model.hmr import HMRLightningModule
 from hmr.config import get_config
+from hmr.model.hmr import HMRLightningModule
 
 
 def check_smpl_exists(smpl_file_location: str):

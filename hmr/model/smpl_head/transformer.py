@@ -3,8 +3,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from hmr.utils.geometry import aa_to_rotmat, rot6d_to_rotmat
 from hmr.model.components.pose_transformer import TransformerDecoder
+from hmr.utils.geometry import aa_to_rotmat, rot6d_to_rotmat
 
 
 class SMPLTransformerDecoderHead(nn.Module):

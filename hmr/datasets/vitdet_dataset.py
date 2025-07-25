@@ -2,9 +2,9 @@ from typing import Dict
 
 import cv2
 import numpy as np
+import torch
 from skimage.filters import gaussian
 from yacs.config import CfgNode
-import torch
 
 from .utils import (
     convert_cvimg_to_tensor,
