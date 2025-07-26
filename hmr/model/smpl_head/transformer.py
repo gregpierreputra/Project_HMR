@@ -100,12 +100,13 @@ class SMPLTransformerDecoderHead(nn.Module):
         pred_betas_list = []
         pred_cam_list = []
         for i in range(self.smpl_ief_iters):
-            # Input token to transformer is zero token
             if self.input_is_mean_shape:
+                # Input token to transformer is mean SMPL params
                 token = torch.cat([pred_body_pose, pred_betas, pred_cam], dim=1)[
                     :, None, :
                 ]
             else:
+                # Input token to transformer is zero token
                 token = torch.zeros(batch_size, 1, 1).to(x.device)
 
             # Pass through transformer
