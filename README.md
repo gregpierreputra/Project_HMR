@@ -31,6 +31,8 @@ All of the files are located in this [Google Drive](https://drive.google.com/dri
 We used MLFlow to log hyperparameters, metrics, and checkpoint artifacts.
 MLFlow should already be installed if you set-up the environment using the previous guide.
 
+Note that the training code requires you to have an mlflow ui/server running.
+
 Simply run the command below in this directory to spin up MLFlow UI.
 
 ```bash
@@ -40,6 +42,22 @@ mlflow ui
 
 We have provided `mlruns` folder that contains our training logs. You should be 
 able to see our training logs when you open the mlflow ui in the browser.
+
+## Runing the Demo
+
+You can run the demo by running the `demo.py`. Please consult the `demo.sh` for 
+required command line arguments, or run `python demo.py --help`.
+
+## Training
+
+### Dataset
+
+To do training, you need to download the datasets from the [4DHumans](https://github.com/shubham-goel/4D-Humans) repo. 
+You should put the datasets at `/opt/ml/data/MDN`. Consult the `IMAGE_DATASETS` on `hmr/datasets/datamodule.py` for exact folder structure.
+
+You should also have a running mlflow instance.
+
+To run the training, change the arguments on the `train.sh` and execute it, or you can run the `train.py` by providing required arguments.
 
 ## Sample Outputs
 
