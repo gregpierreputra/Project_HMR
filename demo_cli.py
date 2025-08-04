@@ -232,7 +232,7 @@ def _parse_cli_args(with_image_path=True):
     parser.add_argument(
         "--detector",
         type=str,
-        default="regnety",
+        default="yolos",
         choices=["vitdet", "regnety", "yolos"],
         help="Using regnety improves runtime",
     )
