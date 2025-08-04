@@ -33,8 +33,9 @@ class ViTDetDataset(torch.utils.data.Dataset):
 
         # Preprocess annotations
         boxes = boxes.astype(np.float32)
+        # ((x2, y2) + (x1, y1)) / 2
         self.center = (boxes[:, 2:4] + boxes[:, 0:2]) / 2.0
-        self.scale = (boxes[:, 2:4] - boxes[:, 0:2]) / 200.0
+        self.scale = boxes[:, 2:4] - boxes[:, 0:2]
         self.personid = np.arange(len(boxes), dtype=np.int32)
 
     def __len__(self) -> int:
@@ -48,7 +49,7 @@ class ViTDetDataset(torch.utils.data.Dataset):
 
         scale = self.scale[idx]
         bbox_size = expand_to_aspect_ratio(
-            scale * 200, target_aspect_ratio=self.bbox_shape
+            scale, target_aspect_ratio=self.bbox_shape
         ).max()
 
         patch_width = patch_height = self.img_size
