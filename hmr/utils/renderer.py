@@ -280,7 +280,7 @@ class Renderer:
         #     alphaMode='OPAQUE',
         #     baseColorFactor=(*mesh_base_color, 1.0))
         vertex_colors = np.array([(*mesh_base_color, 1.0)] * vertices.shape[0])
-        print(vertices.shape, camera_translation.shape)
+        # print(vertices.shape, camera_translation.shape)
         mesh = trimesh.Trimesh(
             vertices.copy() + camera_translation,
             self.faces.copy(),

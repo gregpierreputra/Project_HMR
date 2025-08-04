@@ -18,6 +18,7 @@ from hmr.utils.utils_detectron2 import DefaultPredictor_Lazy
 LIGHT_BLUE = (0.65098039, 0.74117647, 0.85882353)
 
 
+@torch.inference_mode(True)
 def main():
     # Start time
     start = time.perf_counter()
@@ -185,7 +186,6 @@ def main():
         time_det_start = time.perf_counter()
         det_out = detector(img_cv2)
         time_det = time.perf_counter() - time_det_start
-        print(f"DET FORWARD TIME {time_det}")
 
         det_instances = det_out["instances"]
         valid_idx = (det_instances.pred_classes == 0) & (det_instances.scores > 0.5)
@@ -212,7 +212,6 @@ def main():
                 time_model_start = time.perf_counter()
                 out = model(batch)
                 time_forward = time.perf_counter() - time_model_start
-                print(f"HMR FORWARD TIME: {time_forward}")
 
             pred_cam = out["pred_cam"]
             box_center = batch["box_center"].float()
@@ -236,14 +235,17 @@ def main():
                 # Get filename from path img_path
                 img_fn, _ = os.path.splitext(os.path.basename(img_path))
                 person_id = int(batch["personid"][n])
-                white_img = (
-                    torch.ones_like(batch["img"][n]).cpu()
-                    - DEFAULT_MEAN[:, None, None] / 255
-                ) / (DEFAULT_STD[:, None, None] / 255)
-                input_patch = batch["img"][n].cpu() * (
-                    DEFAULT_STD[:, None, None] / 255
-                ) + (DEFAULT_MEAN[:, None, None] / 255)
-                input_patch = input_patch.permute(1, 2, 0).numpy()
+
+                mean = DEFAULT_MEAN[:, None, None] / 255
+                std = DEFAULT_STD[:, None, None] / 255
+
+                white_img = torch.ones_like(batch["img"][n]).cpu().numpy()
+                white_img = (white_img - mean) / (std)
+
+                input_patch = batch["img"][n].cpu().numpy()
+                input_patch = input_patch * (std) + (mean)
+
+                input_patch = np.transpose(input_patch, (1, 2, 0))
 
                 time_start_render = time.perf_counter()
                 regression_img = renderer(
@@ -255,7 +257,6 @@ def main():
                     return_rgba=True,
                 )
                 time_render = time.perf_counter() - time_start_render
-                print(f"RENDER TIME: {time_render}")
 
                 # convert image from RGB to RGBA with full opacity
                 H, W, _ = input_patch.shape
@@ -270,7 +271,7 @@ def main():
                     side_img = renderer(
                         out["pred_vertices"][n].detach().cpu().numpy(),
                         out["pred_cam_t"][n].detach().cpu().numpy(),
-                        white_img,
+                        torch.as_tensor(white_img),
                         mesh_base_color=LIGHT_BLUE,
                         scene_bg_color=(1, 1, 1),
                         side_view=True,
@@ -282,7 +283,7 @@ def main():
                     top_img = renderer(
                         out["pred_vertices"][n].detach().cpu().numpy(),
                         out["pred_cam_t"][n].detach().cpu().numpy(),
-                        white_img,
+                        torch.as_tensor(white_img),
                         mesh_base_color=LIGHT_BLUE,
                         scene_bg_color=(1, 1, 1),
                         top_view=True,
@@ -355,7 +356,6 @@ def main():
             )
 
         end = time.perf_counter()
-        print(end - start)
 
 
 if __name__ == "__main__":
