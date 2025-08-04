@@ -20,9 +20,18 @@ class ViTDetDataset(torch.utils.data.Dataset):
         img_size: int,
         mean: list[float],
         std: list[float],
-        img_cv2: np.array,
-        boxes: np.array,
+        img_cv2: np.ndarray,
+        boxes: np.ndarray,
     ):
+        """Initialise dataset class for iterating through detected people.
+
+        Args:
+            img_size (int): The intended size of the resulting image
+            mean (list[float]): The RGB mean for normalisation
+            std (list[float]): The RGB std for normalisation
+            img_cv2 (np.ndarray): The original image
+            boxes (np.ndarray): The detected bounding boxes with format of `[[x1, y1, x2, y2]]`
+        """
         super().__init__()
         self.img_cv2 = img_cv2
 
@@ -33,9 +42,16 @@ class ViTDetDataset(torch.utils.data.Dataset):
 
         # Preprocess annotations
         boxes = boxes.astype(np.float32)
+        # print(boxes.shape)
+
+        # Get center of bbox: ((x2, y2) + (x1, y1)) / 2
         self.center = (boxes[:, 2:4] + boxes[:, 0:2]) / 2.0
-        self.scale = (boxes[:, 2:4] - boxes[:, 0:2]) / 200.0
+        # Get W and H of bbox: ((x2, y2) - (x1, y1))
+        self.scale = boxes[:, 2:4] - boxes[:, 0:2]
         self.personid = np.arange(len(boxes), dtype=np.int32)
+
+        area = self.scale[:, 0] * self.scale[:, 1]
+        self.max_area_index = np.argmax(area)
 
     def __len__(self) -> int:
         return len(self.personid)
@@ -48,7 +64,7 @@ class ViTDetDataset(torch.utils.data.Dataset):
 
         scale = self.scale[idx]
         bbox_size = expand_to_aspect_ratio(
-            scale * 200, target_aspect_ratio=self.bbox_shape
+            scale, target_aspect_ratio=self.bbox_shape
         ).max()
 
         patch_width = patch_height = self.img_size
@@ -59,7 +75,7 @@ class ViTDetDataset(torch.utils.data.Dataset):
         if True:
             # Blur image to avoid aliasing artifacts
             downsampling_factor = (bbox_size * 1.0) / patch_width
-            print(f"{downsampling_factor=}")
+            # print(f"{downsampling_factor=}")
             downsampling_factor = downsampling_factor / 2.0
             if downsampling_factor > 1.1:
                 cvimg = gaussian(

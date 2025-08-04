@@ -18,6 +18,7 @@ from hmr.utils.utils_detectron2 import DefaultPredictor_Lazy
 LIGHT_BLUE = (0.65098039, 0.74117647, 0.85882353)
 
 
+@torch.inference_mode(True)
 def main():
     # Start time
     start = time.perf_counter()
@@ -185,7 +186,6 @@ def main():
         time_det_start = time.perf_counter()
         det_out = detector(img_cv2)
         time_det = time.perf_counter() - time_det_start
-        print(f"DET FORWARD TIME {time_det}")
 
         det_instances = det_out["instances"]
         valid_idx = (det_instances.pred_classes == 0) & (det_instances.scores > 0.5)
@@ -212,7 +212,6 @@ def main():
                 time_model_start = time.perf_counter()
                 out = model(batch)
                 time_forward = time.perf_counter() - time_model_start
-                print(f"HMR FORWARD TIME: {time_forward}")
 
             pred_cam = out["pred_cam"]
             box_center = batch["box_center"].float()
@@ -236,14 +235,17 @@ def main():
                 # Get filename from path img_path
                 img_fn, _ = os.path.splitext(os.path.basename(img_path))
                 person_id = int(batch["personid"][n])
-                white_img = (
-                    torch.ones_like(batch["img"][n]).cpu()
-                    - DEFAULT_MEAN[:, None, None] / 255
-                ) / (DEFAULT_STD[:, None, None] / 255)
-                input_patch = batch["img"][n].cpu() * (
-                    DEFAULT_STD[:, None, None] / 255
-                ) + (DEFAULT_MEAN[:, None, None] / 255)
-                input_patch = input_patch.permute(1, 2, 0).numpy()
+
+                mean = DEFAULT_MEAN[:, None, None] / 255
+                std = DEFAULT_STD[:, None, None] / 255
+
+                white_img = torch.ones_like(batch["img"][n]).cpu().numpy()
+                white_img = (white_img - mean) / (std)
+
+                input_patch = batch["img"][n].cpu().numpy()
+                input_patch = input_patch * (std) + (mean)
+
+                input_patch = np.transpose(input_patch, (1, 2, 0))
 
                 time_start_render = time.perf_counter()
                 regression_img = renderer(
@@ -252,9 +254,16 @@ def main():
                     batch["img"][n],
                     mesh_base_color=LIGHT_BLUE,
                     scene_bg_color=(1, 1, 1),
+                    return_rgba=True,
                 )
                 time_render = time.perf_counter() - time_start_render
-                print(f"RENDER TIME: {time_render}")
+
+                # convert image from RGB to RGBA with full opacity
+                H, W, _ = input_patch.shape
+                opaque = np.ones((H, W, 1), dtype=np.float32)
+                input_patch = np.concatenate(
+                    (input_patch, opaque), axis=-1, dtype=np.float32
+                )
 
                 final_img = np.concatenate([input_patch, regression_img], axis=1)
 
@@ -262,10 +271,11 @@ def main():
                     side_img = renderer(
                         out["pred_vertices"][n].detach().cpu().numpy(),
                         out["pred_cam_t"][n].detach().cpu().numpy(),
-                        white_img,
+                        torch.as_tensor(white_img),
                         mesh_base_color=LIGHT_BLUE,
                         scene_bg_color=(1, 1, 1),
                         side_view=True,
+                        return_rgba=True,
                     )
                     final_img = np.concatenate([final_img, side_img], axis=1)
 
@@ -273,16 +283,23 @@ def main():
                     top_img = renderer(
                         out["pred_vertices"][n].detach().cpu().numpy(),
                         out["pred_cam_t"][n].detach().cpu().numpy(),
-                        white_img,
+                        torch.as_tensor(white_img),
                         mesh_base_color=LIGHT_BLUE,
                         scene_bg_color=(1, 1, 1),
                         top_view=True,
+                        return_rgba=True,
                     )
                     final_img = np.concatenate([final_img, top_img], axis=1)
 
+                # convert final image to uint8 RGBA
+                final_img = np.astype(final_img * 255, np.uint8)
+
+                # convert to BGRA
+                final_img = cv2.cvtColor(final_img, cv2.COLOR_RGBA2BGRA)
+
                 cv2.imwrite(
                     os.path.join(args.out_folder, f"{img_fn}_{person_id}.png"),
-                    255 * final_img[:, :, ::-1],
+                    final_img,
                 )
 
                 # Add all verts and cams to list
@@ -312,23 +329,33 @@ def main():
                 all_verts, cam_t=all_cam_t, render_res=img_size[n], **misc_args
             )
 
-            # Overlay image
-            input_img = img_cv2.astype(np.float32)[:, :, ::-1] / 255.0
-            input_img = np.concatenate(
-                [input_img, np.ones_like(input_img[:, :, :1])], axis=2
-            )  # Add alpha channel
-            input_img_overlay = (
-                input_img[:, :, :3] * (1 - cam_view[:, :, 3:])
-                + cam_view[:, :, :3] * cam_view[:, :, 3:]
+            # # Overlay image
+            # input_img = img_cv2.astype(np.float32)[:, :, ::-1] / 255.0
+            # input_img = np.concatenate(
+            #     [input_img, np.ones_like(input_img[:, :, :1])], axis=-1
+            # )  # Add alpha channel
+            # input_img_overlay = (
+            #     input_img[:, :, :3] * (1 - cam_view[:, :, 3:])
+            #     + cam_view[:, :, :3] * cam_view[:, :, 3:]
+            # )
+
+            # cv2.imwrite(
+            #     os.path.join(args.out_folder, f"{img_fn}_all.png"),
+            #     255 * input_img_overlay[:, :, ::-1],
+            # )
+
+            # new code - render without overlay, only the pose
+            cam_view_bgra = cv2.cvtColor(
+                np.astype(255 * cam_view, np.uint8),
+                cv2.COLOR_RGB2BGRA,
             )
 
             cv2.imwrite(
                 os.path.join(args.out_folder, f"{img_fn}_all.png"),
-                255 * input_img_overlay[:, :, ::-1],
+                cam_view_bgra,
             )
 
         end = time.perf_counter()
-        print(end - start)
 
 
 if __name__ == "__main__":

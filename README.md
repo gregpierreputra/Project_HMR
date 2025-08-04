@@ -43,10 +43,15 @@ mlflow ui
 We have provided `mlruns` folder that contains our training logs. You should be 
 able to see our training logs when you open the mlflow ui in the browser.
 
-## Runing the Demo
+## Runing the Demo (`demo.py`)
 
 You can run the demo by running the `demo.py`. Please consult the `demo.sh` for 
 required command line arguments, or run `python demo.py --help`.
+
+## WebUI Demo
+
+We have provided Gradio WebUI interface for demo. 
+Simply run `demo_web.py` and open the link in the browser.
 
 ## Training
 

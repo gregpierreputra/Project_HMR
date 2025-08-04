@@ -25,3 +25,5 @@ dependencies:
     - mlflow
     - black
     - ruff
+    - transformers
+    - gradio
