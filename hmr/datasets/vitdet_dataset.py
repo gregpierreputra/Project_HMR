@@ -20,8 +20,8 @@ class ViTDetDataset(torch.utils.data.Dataset):
         img_size: int,
         mean: list[float],
         std: list[float],
-        img_cv2: np.array,
-        boxes: np.array,
+        img_cv2: np.ndarray,
+        boxes: np.ndarray,
     ):
         """Initialise dataset class for iterating through detected people.
 
@@ -29,8 +29,8 @@ class ViTDetDataset(torch.utils.data.Dataset):
             img_size (int): The intended size of the resulting image
             mean (list[float]): The RGB mean for normalisation
             std (list[float]): The RGB std for normalisation
-            img_cv2 (np.array): The original image
-            boxes (np.array): The detected bounding boxes with format of `[[x1, y1, x2, y2]]`
+            img_cv2 (np.ndarray): The original image
+            boxes (np.ndarray): The detected bounding boxes with format of `[[x1, y1, x2, y2]]`
         """
         super().__init__()
         self.img_cv2 = img_cv2
@@ -49,6 +49,9 @@ class ViTDetDataset(torch.utils.data.Dataset):
         # Get W and H of bbox: ((x2, y2) - (x1, y1))
         self.scale = boxes[:, 2:4] - boxes[:, 0:2]
         self.personid = np.arange(len(boxes), dtype=np.int32)
+
+        area = self.scale[:, 0] * self.scale[:, 1]
+        self.max_area_index = np.argmax(area)
 
     def __len__(self) -> int:
         return len(self.personid)
