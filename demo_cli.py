@@ -11,6 +11,7 @@ from hmr.model.hmr import HMRLightningModule
 from hmr.utils import recursive_to
 from hmr.utils.renderer import Renderer, cam_crop_to_full
 from hmr.utils.utils_detectron2 import DefaultPredictor_Lazy
+from hmr.model.detection import YolosDetector
 
 LIGHT_BLUE = (0.65098039, 0.74117647, 0.85882353)
 
@@ -21,6 +22,9 @@ class HMRDemo:
         self.device = (
             torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         )
+
+        if self.device.type == "cuda":
+            print("Using CUDA")
 
         # Load the model using the checkpoint
         self.model = HMRLightningModule.load_from_checkpoint(
@@ -36,11 +40,9 @@ class HMRDemo:
         self.model.eval()
 
         # Load detector
-        # Vitdet from Detectron2
         if self.args.detector == "vitdet":
-
+            # Vitdet from Detectron2
             from detectron2.config import LazyConfig
-
             import hmr
 
             cfg_path = (
@@ -58,9 +60,8 @@ class HMRDemo:
                 )
 
             self.detector = DefaultPredictor_Lazy(detectron2_cfg)
-
-        # Regnety from Detectron2
         elif self.args.detector == "regnety":
+            # Regnety from Detectron2
             from detectron2 import model_zoo
 
             detectron2_cfg = model_zoo.get_config(
@@ -69,6 +70,8 @@ class HMRDemo:
             detectron2_cfg.model.roi_heads.box_predictor.test_score_thresh = 0.5
             detectron2_cfg.model.roi_heads.box_predictor.test_nms_thresh = 0.4
             self.detector = DefaultPredictor_Lazy(detectron2_cfg)
+        elif self.args.detector == "yolos":
+            self.detector = YolosDetector(use_cuda=(self.device.type == "cuda"))
 
         # Setup the renderer
         self.renderer = Renderer(
@@ -79,17 +82,25 @@ class HMRDemo:
             faces=self.model.smpl.faces,
         )
 
+        self._obj_savepath = "demo/output.obj"
+
     @torch.inference_mode()
-    def __call__(self, img_path: str):
+    def run(self, img_input: str | np.ndarray):
         # Iterate over all images in the folder
-        img_cv2 = cv2.imread(str(img_path))
+        if isinstance(img_input, (str, Path)):
+            img_cv2 = cv2.imread(str(img_input))
+        else:
+            img_cv2 = cv2.cvtColor(img_input, cv2.COLOR_RGB2BGR)
 
         # Detect humans in the image
         det_out = self.detector(img_cv2)
 
-        det_instances = det_out["instances"]
-        valid_idx = (det_instances.pred_classes == 0) & (det_instances.scores > 0.5)
-        boxes = det_instances.pred_boxes.tensor[valid_idx].cpu().numpy()
+        if self.args.detector != "yolos":
+            det_instances = det_out["instances"]
+            valid_idx = (det_instances.pred_classes == 0) & (det_instances.scores > 0.5)
+            boxes = det_instances.pred_boxes.tensor[valid_idx].cpu().numpy()
+        else:
+            boxes = det_out.cpu().numpy()
 
         # Run HMR2.0 on all detected humans
         dataset = ViTDetDataset(
@@ -142,7 +153,7 @@ class HMRDemo:
                     tmesh = self.renderer.vertices_to_trimesh(
                         verts, camera_translation, LIGHT_BLUE
                     )
-                    tmesh.export("demo/output.obj")
+                    tmesh.export(self._obj_savepath)
 
         if len(all_verts) < 1:
             return cv2.cvtColor(img_cv2, cv2.COLOR_BGR2RGB)
@@ -172,18 +183,22 @@ class HMRDemo:
 
         input_img_overlay = np.astype(input_img_overlay * 255, np.uint8)
 
-        return input_img_overlay
+        return input_img_overlay, self._obj_savepath
+
+    def __call__(self, img_input):
+        return self.run(img_input)
 
 
-def _parse_cli_args():
+def _parse_cli_args(with_image_path=True):
     # Argument parser
     parser = argparse.ArgumentParser(description="HMR Demo Code")
 
-    parser.add_argument(
-        "image_path",
-        type=str,
-        help="Path to the image file",
-    )
+    if with_image_path:
+        parser.add_argument(
+            "image_path",
+            type=str,
+            help="Path to the image file",
+        )
     parser.add_argument(
         "--smpl_model_path",
         type=str,
@@ -218,7 +233,7 @@ def _parse_cli_args():
         "--detector",
         type=str,
         default="regnety",
-        choices=["vitdet", "regnety"],
+        choices=["vitdet", "regnety", "yolos"],
         help="Using regnety improves runtime",
     )
     parser.add_argument(
@@ -238,7 +253,7 @@ def _main():
     image_path = args.image_path
 
     hmr_demo = HMRDemo(args=args)
-    render = hmr_demo(image_path)
+    render, _ = hmr_demo(image_path)
 
     Image.fromarray(render).save("demo/output.png")
 
