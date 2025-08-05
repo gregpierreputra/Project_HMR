@@ -89,8 +89,10 @@ class HMRDemo:
         # Iterate over all images in the folder
         if isinstance(img_input, (str, Path)):
             img_cv2 = cv2.imread(str(img_input))
-        else:
+        elif isinstance(img_input, np.ndarray):
             img_cv2 = cv2.cvtColor(img_input, cv2.COLOR_RGB2BGR)
+        else:
+            raise TypeError(f"Invalid img_input type {type(img_input)}")
 
         # Detect humans in the image
         det_out = self.detector(img_cv2)
@@ -101,6 +103,9 @@ class HMRDemo:
             boxes = det_instances.pred_boxes.tensor[valid_idx].cpu().numpy()
         else:
             boxes = det_out.cpu().numpy()
+
+        if len(boxes) < 1:
+            raise RuntimeError("No person is detected!")
 
         # Run HMR2.0 on all detected humans
         dataset = ViTDetDataset(
