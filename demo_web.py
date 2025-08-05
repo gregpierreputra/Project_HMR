@@ -6,7 +6,13 @@ from demo_cli import HMRDemo, _parse_cli_args
 def _main():
     args = _parse_cli_args(with_image_path=False)
 
-    inputs = [gr.Image(type="numpy", label="Input image")]
+    inputs = [
+        gr.Image(
+            type="numpy",
+            label="Input image",
+            value="demo/input_images/Feature_02_ActionPoses_mobile.jpg",
+        )
+    ]
 
     outputs = [
         gr.Image(label="Output all mesh"),
