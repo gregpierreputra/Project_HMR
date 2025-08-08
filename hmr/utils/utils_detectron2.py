@@ -3,6 +3,7 @@ import torch
 from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.config import CfgNode, instantiate
 from detectron2.data import MetadataCatalog
+from detectron2.modeling import build_model
 from omegaconf import OmegaConf
 
 
@@ -74,7 +75,7 @@ class DefaultPredictor_Lazy:
 
         # The evaluation function for the DefaultPredictor is locked behind CUDA availability (??)
         # Change implementation depending on CUDA availability
-        if (torch.cuda.is_available()):
+        if torch.cuda.is_available():
             self.model.eval().cuda()
         else:
             self.model.eval()

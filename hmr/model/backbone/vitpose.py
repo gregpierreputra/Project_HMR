@@ -10,7 +10,7 @@ from functools import partial
 import torch
 import torch.nn as nn
 import torch.utils.checkpoint as checkpoint
-from timm.models.layers import drop_path, to_2tuple, trunc_normal_
+from timm.layers import drop_path, to_2tuple, trunc_normal_
 
 
 class DropPath(nn.Module):

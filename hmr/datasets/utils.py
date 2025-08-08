@@ -3,13 +3,14 @@ Parts of the code are taken or adapted from
 https://github.com/mkocabas/EpipolarPose/blob/master/lib/utils/img_utils.py
 """
 
-import torch
-import numpy as np
-from skimage.transform import rotate, resize
-from skimage.filters import gaussian
 import random
+from typing import Dict, List, Tuple
+
 import cv2
-from typing import List, Dict, Tuple
+import numpy as np
+import torch
+from skimage.filters import gaussian
+from skimage.transform import resize, rotate
 
 
 def expand_to_aspect_ratio(input_shape, target_aspect_ratio=None):

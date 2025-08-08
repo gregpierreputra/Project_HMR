@@ -4,12 +4,12 @@ from typing import Dict, Tuple
 import pytorch_lightning as pl
 import torch
 
-from hmr.utils.geometry import aa_to_rotmat, perspective_projection
 from hmr.model.backbone.vitpose import ViTBackbone
 from hmr.model.discriminator import Discriminator
 from hmr.model.losses import Keypoint2DLoss, Keypoint3DLoss, ParameterLoss
 from hmr.model.smpl.smpl_wrapper import SMPL
 from hmr.model.smpl_head.transformer import SMPLTransformerDecoderHead
+from hmr.utils.geometry import aa_to_rotmat, perspective_projection
 
 
 class HMRLightningModule(pl.LightningModule):
@@ -53,7 +53,9 @@ class HMRLightningModule(pl.LightningModule):
         # Load the ViTBackbone state dictionary
         # Utilize the weights for ViTPose Small model extracted by Agi
         vitpose_state_dict = torch.load(
-            vitpose_backbone_pretrained_path, map_location="cpu"
+            vitpose_backbone_pretrained_path,
+            map_location="cpu",
+            weights_only=True,
         )
 
         # Create the ViTBackbone feature extractor

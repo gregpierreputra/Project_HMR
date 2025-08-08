@@ -1,0 +1,15 @@
+artifact_uri: mlflow-artifacts:/926267486156919090/446f3e3efd6c4a46a4d2ab0d12b0f108/artifacts
+deleted_time: 1752804129945
+end_time: 1752755257762
+entry_point_name: ''
+experiment_id: '926267486156919090'
+lifecycle_stage: deleted
+run_id: 446f3e3efd6c4a46a4d2ab0d12b0f108
+run_name: hmr-17_07_2025_12_27_23
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1752755244446
+status: 4
+tags: []
+user_id: agi

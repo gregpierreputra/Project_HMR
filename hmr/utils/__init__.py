@@ -1,5 +1,7 @@
-import torch
 from typing import Any
+
+import torch
+
 
 def recursive_to(x: Any, target: torch.device):
     """
